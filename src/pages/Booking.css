@@ -1,0 +1,74 @@
+/* src/pages/Booking.css */
+.booking-page {
+  min-height: 80vh;
+  background: #f8f9fa;
+  padding: 20px;
+}
+
+.booking-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.booking-container h1 {
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.booking-form {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-top: 20px;
+}
+
+.booking-form h2 {
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.booking-form p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.no-cleaner {
+  background: white;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.no-cleaner h2 {
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.no-cleaner p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.booking-actions {
+  margin-top: 20px;
+}
+
+.btn-primary {
+  background: #007bff;
+  color: white;
+  padding: 12px 30px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 1rem;
+  transition: background 0.3s;
+}
+
+.btn-primary:hover {
+  background: #0056b3;
+}

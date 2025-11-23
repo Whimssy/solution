@@ -1,4 +1,4 @@
-// components/referral/ReferralSystem.js
+// src/components/referral/ReferralSystem.js
 import React, { useState } from 'react';
 import { sendReferral } from '../../services/referralService';
 
@@ -7,22 +7,39 @@ const ReferralSystem = ({ cleanerId }) => {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
 
+  // Add this missing function
+  const pickContacts = async () => {
+    return [
+      { name: 'John Friend', phone: '+254712345678' },
+      { name: 'Mary Colleague', phone: '+254723456789' },
+      { name: 'David Relative', phone: '+254734567890' }
+    ];
+  };
+
   const handleContactSelect = async () => {
-    // This would integrate with device contact API
-    // For web, we might use a contact picker or manual input
-    const contacts = await pickContacts();
-    setSelectedContacts(contacts);
+    try {
+      const contacts = await pickContacts();
+      setSelectedContacts(contacts);
+    } catch (error) {
+      console.error('Error picking contacts:', error);
+      alert('Failed to pick contacts. Please try again.');
+    }
   };
 
   const handleSendReferrals = async () => {
+    if (selectedContacts.length === 0) {
+      alert('Please select contacts first');
+      return;
+    }
+
     setSending(true);
     try {
       await sendReferral({
         cleanerId,
         contacts: selectedContacts,
-        message: message || `Check out this great cleaner on Madeasy!`
+        message: message || `Check out this great cleaner on Madeasy! I highly recommend their services.`
       });
-      alert('Referrals sent successfully!');
+      alert(`Referrals sent successfully to ${selectedContacts.length} contacts!`);
       setSelectedContacts([]);
       setMessage('');
     } catch (error) {
@@ -38,10 +55,7 @@ const ReferralSystem = ({ cleanerId }) => {
       
       <div className="referral-content">
         <div className="contact-selection">
-          <button 
-            onClick={handleContactSelect}
-            className="btn-primary"
-          >
+          <button onClick={handleContactSelect} className="btn-primary">
             Select Contacts
           </button>
           

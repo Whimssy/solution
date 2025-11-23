@@ -1,7 +1,37 @@
 // src/context/BookingContext.js
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 const BookingContext = createContext();
+
+export const BookingProvider = ({ children }) => {
+  const [selectedCleaner, setSelectedCleaner] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const selectCleaner = (cleaner) => {
+    console.log('Selecting cleaner:', cleaner); // Debug log
+    setSelectedCleaner(cleaner);
+    setError(null);
+  };
+
+  const clearSelectedCleaner = () => {
+    setSelectedCleaner(null);
+  };
+
+  return (
+    <BookingContext.Provider value={{
+      selectedCleaner,
+      isLoading,
+      error,
+      selectCleaner,
+      clearSelectedCleaner,
+      setLoading: setIsLoading,
+      setError
+    }}>
+      {children}
+    </BookingContext.Provider>
+  );
+};
 
 export const useBooking = () => {
   const context = useContext(BookingContext);
@@ -9,60 +39,4 @@ export const useBooking = () => {
     throw new Error('useBooking must be used within a BookingProvider');
   }
   return context;
-};
-
-export const BookingProvider = ({ children }) => {
-  const [currentBooking, setCurrentBooking] = useState(null);
-  const [bookings, setBookings] = useState([]);
-  const [selectedCleaner, setSelectedCleaner] = useState(null);
-
-  const createBooking = useCallback(async (bookingData) => {
-    try {
-      // Simulate API call
-      const newBooking = {
-        id: Date.now().toString(),
-        ...bookingData,
-        status: 'confirmed',
-        createdAt: new Date().toISOString()
-      };
-      
-      setCurrentBooking(newBooking);
-      setBookings(prev => [...prev, newBooking]);
-      return newBooking;
-    } catch (error) {
-      console.error('Booking creation failed:', error);
-      throw error;
-    }
-  }, []);
-
-  const updateBookingStatus = useCallback((bookingId, status) => {
-    setBookings(prev => 
-      prev.map(booking => 
-        booking.id === bookingId ? { ...booking, status } : booking
-      )
-    );
-    
-    if (currentBooking && currentBooking.id === bookingId) {
-      setCurrentBooking(prev => ({ ...prev, status }));
-    }
-  }, [currentBooking]);
-
-  const selectCleaner = useCallback((cleaner) => {
-    setSelectedCleaner(cleaner);
-  }, []);
-
-  const value = {
-    currentBooking,
-    bookings,
-    selectedCleaner,
-    createBooking,
-    updateBookingStatus,
-    selectCleaner
-  };
-
-  return (
-    <BookingContext.Provider value={value}>
-      {children}
-    </BookingContext.Provider>
-  );
 };

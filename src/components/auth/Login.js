@@ -1,7 +1,7 @@
-// src/components/auth/Login.js
+/// src/components/auth/Login.js
 import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext'; // Make sure it's like this
+import { useNavigate } from 'react-router-dom'; 
 
 const LoginForm = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
