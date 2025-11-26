@@ -1,7 +1,7 @@
 // src/pages/Booking.js - Updated version
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import BookingForm from '../components/booking/BookingForm';
+import BookingForm from '../components/booking/BookingForm/BookingForm';
 import { useBooking } from '../context/BookingContext';
 import './Booking.css';
 

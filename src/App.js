@@ -1,101 +1,141 @@
-// src/App.js
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-
-// Context Providers
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { BookingProvider } from './context/BookingContext';
-import { PaymentProvider } from './context/PaymentContext';
-
-// Pages
+import ProtectedRoute from './components/auth/Routes/ProtectedRoute';
+import AdminRoute from './components/auth/Routes/AdminRoute';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
 import CleanerSearch from './pages/CleanerSearch';
-import Booking from './pages/Booking';
-import Payment from './pages/Payment';
-import Referral from './pages/Referral';
 import AdminDashboard from './pages/AdminDashboard';
-import Settings from './pages/Settings';
-import Bookings from './pages/Bookings';
-import BookingConfirmation from './pages/BookingConfirmation';
-import CleanerProfile from './pages/CleanerProfile'; // Add this import
-
-// Components
+import AdminLogin from './pages/AdminLogin';
+import BookingPage from './pages/BookingPage';
+import PaymentPage from './pages/PaymentPage';
+import ReferralPage from './pages/ReferralPage';
+import CleanerRegistration from './components/auth/CleanerRegistration/CleanerRegistration';
+import Dashboard from './pages/Dashboard';
+import CleanerProfile from './pages/CleanerProfile';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
-
-// Styles
-import './styles/App.css';
+import './App.css';
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        {/* Wrap the entire app with BookingProvider since multiple components use it */}
-        <BookingProvider>
-          <div className="App">
-            <Navbar />
-            <main className="main-content">
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Login />} />
-                <Route path="/login" element={<Login />} />
-                
-                {/* Protected Routes */}
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/search" element={<CleanerSearch />} />
-                <Route path="/bookings" element={<Bookings />} />
-                
-                {/* Cleaner Profile Route */}
-                <Route path="/cleaner/:cleanerId" element={<CleanerProfile />} />
-                
-                {/* Booking Flow */}
-                <Route path="/booking" element={<Booking />} />
-                
-                <Route path="/payment" element={
-                  <PaymentProvider>
-                    <Payment />
-                  </PaymentProvider>
-                } />
-                
-                <Route path="/booking-confirmation" element={<BookingConfirmation />} />
-                
-                {/* Other Protected Routes */}
-                <Route path="/referral" element={<Referral />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/admin" element={<AdminDashboard />} />
-                
-                {/* 404 Page */}
-                <Route path="*" element={
-                  <div className="page-not-found">
-                    <div className="not-found-container">
-                      <h2>404 - Page Not Found</h2>
-                      <p>The page you're looking for doesn't exist.</p>
-                      <div className="not-found-actions">
-                        <button 
-                          onClick={() => window.location.href = '/'}
-                          className="btn-primary"
-                        >
-                          Go Home
-                        </button>
-                        <button 
-                          onClick={() => window.history.back()}
-                          className="btn-secondary"
-                        >
-                          Go Back
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                } />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
-        </BookingProvider>
-      </AuthProvider>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <div className="App">
+          {/* Show navbar for all routes except admin */}
+          <Routes>
+            <Route path="/admin/*" element={null} />
+            <Route path="*" element={<Navbar />} />
+          </Routes>
+          
+          <main className="main-content">
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
+              
+              {/* Protected Client Routes */}
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/search" 
+                element={
+                  <ProtectedRoute>
+                    <CleanerSearch />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/cleaner/:cleanerId" 
+                element={
+                  <ProtectedRoute>
+                    <CleanerProfile />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/book/:cleanerId" 
+                element={
+                  <ProtectedRoute>
+                    <BookingPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/payment/:bookingId" 
+                element={
+                  <ProtectedRoute>
+                    <PaymentPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/referrals" 
+                element={
+                  <ProtectedRoute>
+                    <ReferralPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/become-cleaner" 
+                element={
+                  <ProtectedRoute>
+                    <CleanerRegistration />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Admin Routes */}
+              <Route 
+                path="/admin/dashboard" 
+                element={
+                  <AdminRoute>
+                    <AdminDashboard />
+                  </AdminRoute>
+                } 
+              />
+              
+              {/* Fallback - Redirect to appropriate dashboard */}
+              <Route path="*" element={<NavigateToAppropriateDashboard />} />
+            </Routes>
+          </main>
+
+          {/* Show footer for all routes except admin */}
+          <Routes>
+            <Route path="/admin/*" element={null} />
+            <Route path="*" element={<Footer />} />
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
   );
+}
+
+// Component to redirect users to appropriate dashboard
+function NavigateToAppropriateDashboard() {
+  // Try to get user from localStorage
+  const userStr = localStorage.getItem('madeasy_user');
+  
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      if (user.role === 'admin' || user.role === 'super_admin') {
+        return <Navigate to="/admin/dashboard" replace />;
+      }
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+    }
+  }
+  
+  // Default redirect to home
+  return <Navigate to="/" replace />;
 }
 
 export default App;

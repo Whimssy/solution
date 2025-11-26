@@ -1,0 +1,211 @@
+.otp-login {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 30px 20px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.login-header h2 {
+  color: #2c5530;
+  margin-bottom: 8px;
+  font-size: 1.8em;
+}
+
+.login-header p {
+  color: #666;
+  margin: 0;
+}
+
+.input-group {
+  margin-bottom: 20px;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+}
+
+.phone-input,
+.otp-input {
+  width: 100%;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 1em;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.phone-input:focus,
+.otp-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.send-otp-btn,
+.verify-otp-btn {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.send-otp-btn:hover:not(:disabled),
+.verify-otp-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #45a049, #3d8b40);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.send-otp-btn:disabled,
+.verify-otp-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.send-otp-btn.loading,
+.verify-otp-btn.loading {
+  background: #666;
+}
+
+.otp-header {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.otp-header h3 {
+  color: #2c5530;
+  margin-bottom: 8px;
+}
+
+.otp-header p {
+  color: #666;
+  margin: 0;
+}
+
+.otp-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.back-btn {
+  background: none;
+  border: 2px solid #e0e0e0;
+  color: #666;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover:not(:disabled) {
+  border-color: #4CAF50;
+  color: #4CAF50;
+}
+
+.resend-otp {
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.resend-otp p {
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.resend-btn {
+  background: none;
+  border: none;
+  color: #4CAF50;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.resend-btn:hover:not(:disabled) {
+  color: #45a049;
+}
+
+.message {
+  padding: 12px;
+  border-radius: 8px;
+  margin: 20px 0;
+  text-align: center;
+  font-weight: 500;
+}
+
+.message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.login-footer {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
+  text-align: center;
+}
+
+.login-footer p {
+  color: #999;
+  font-size: 0.8em;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid transparent;
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .otp-login {
+    margin: 20px;
+    padding: 25px 15px;
+  }
+
+  .login-header h2 {
+    font-size: 1.5em;
+  }
+}

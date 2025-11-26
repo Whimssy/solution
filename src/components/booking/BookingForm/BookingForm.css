@@ -1,0 +1,159 @@
+/* Progress Steps */
+.booking-steps {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+  gap: 40px;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.step-number {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e9ecef;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.step.active .step-number {
+  background: #007bff;
+  color: white;
+}
+
+.step span {
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.step.active span {
+  color: #007bff;
+  font-weight: 600;
+}
+
+/* Form Sections */
+.form-section {
+  margin-bottom: 30px;
+}
+
+.form-section h3 {
+  margin-bottom: 20px;
+  color: #333;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 10px;
+}
+
+/* Payment Methods */
+.payment-methods {
+  margin: 20px 0;
+}
+
+.payment-option {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.payment-option:hover {
+  border-color: #007bff;
+  background: #f8f9fa;
+}
+
+.payment-option input[type="radio"] {
+  margin-right: 15px;
+}
+
+.payment-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.payment-icon {
+  font-size: 24px;
+}
+
+.payment-option strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.payment-option small {
+  color: #6c757d;
+}
+
+.payment-option input[type="radio"]:checked + .payment-content {
+  color: #007bff;
+}
+
+.payment-option input[type="radio"]:checked {
+  accent-color: #007bff;
+}
+
+/* Payment Instructions */
+.payment-instructions {
+  background: #e7f3ff;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+  margin: 15px 0;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.form-actions .btn-secondary {
+  flex: 1;
+}
+
+.form-actions .btn-primary {
+  flex: 2;
+}
+
+/* Enhanced Payment Summary */
+.payment-summary {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.payment-summary h4 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.summary-total {
+  display: flex;
+  justify-content: space-between;
+  border-top: 2px solid #dee2e6;
+  padding-top: 12px;
+  font-size: 18px;
+  font-weight: bold;
+}

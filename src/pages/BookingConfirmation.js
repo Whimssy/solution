@@ -5,10 +5,11 @@ import { useBooking } from '../context/BookingContext';
 import './BookingConfirmation.css';
 
 const BookingConfirmation = () => {
-  const navigate = useLocation();
+  const navigate = useNavigate();
   const location = useLocation();
   const { clearSelectedCleaner } = useBooking();
 
+  // Get booking data from navigation state or use mock data
   const booking = location.state?.booking || {
     bookingId: `BK${Date.now()}`,
     service: 'Standard Cleaning',
@@ -22,6 +23,7 @@ const BookingConfirmation = () => {
       rating: '4.8'
     },
     address: '123 Main St, Nairobi',
+    location: 'Westlands',
     payment: {
       status: 'success',
       transactionId: `TXN${Date.now()}`,
@@ -38,6 +40,48 @@ const BookingConfirmation = () => {
     navigate('/bookings');
   };
 
+  const handleDownloadReceipt = () => {
+    // Simple receipt download simulation
+    const receiptText = `
+      MAMAFUA CLEANING SERVICES
+      =========================
+      
+      Booking Confirmation
+      Booking ID: ${booking.bookingId}
+      Date: ${new Date().toLocaleDateString()}
+      
+      Service Details:
+      - Service: ${booking.service}
+      - Date: ${formatDate(booking.date)}
+      - Time: ${booking.time}
+      - Duration: ${booking.duration} hours
+      - Location: ${booking.location}
+      - Address: ${booking.address}
+      
+      Cleaner: ${booking.cleaner.name}
+      Rating: ⭐ ${booking.cleaner.rating}
+      Phone: ${booking.cleaner.phone}
+      
+      Payment Details:
+      - Amount: KES ${booking.total}
+      - Method: ${booking.payment.method.toUpperCase()}
+      - Transaction ID: ${booking.payment.transactionId}
+      - Status: ${booking.payment.status}
+      
+      Thank you for choosing MamaFua!
+    `;
+    
+    const blob = new Blob([receiptText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `receipt-${booking.bookingId}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -46,6 +90,8 @@ const BookingConfirmation = () => {
       day: 'numeric'
     });
   };
+
+  console.log('🎉 BookingConfirmation loaded with data:', booking);
 
   return (
     <div className="confirmation-page">
@@ -76,6 +122,10 @@ const BookingConfirmation = () => {
                 <span className="value">{booking.duration} hours</span>
               </div>
               <div className="detail-item">
+                <span className="label">Location:</span>
+                <span className="value">{booking.location}</span>
+              </div>
+              <div className="detail-item">
                 <span className="label">Total Amount:</span>
                 <span className="value amount">KES {booking.total}</span>
               </div>
@@ -100,7 +150,7 @@ const BookingConfirmation = () => {
                   <span className="phone">📞 {booking.cleaner.phone}</span>
                 </div>
                 <p className="cleaner-note">
-                  Your cleaner will contact you before the scheduled time
+                  Your cleaner will contact you 24 hours before the scheduled time
                 </p>
               </div>
             </div>
@@ -120,7 +170,9 @@ const BookingConfirmation = () => {
               </div>
               <div className="payment-item">
                 <span className="label">Status:</span>
-                <span className="value status-success">✅ Paid</span>
+                <span className={`value status-${booking.payment.status}`}>
+                  {booking.payment.status === 'success' ? '✅ Paid' : '⏳ Pending'}
+                </span>
               </div>
               <div className="payment-item">
                 <span className="label">Amount Paid:</span>
@@ -172,8 +224,8 @@ const BookingConfirmation = () => {
             <button className="btn-outline" onClick={handleViewBookings}>
               View My Bookings
             </button>
-            <button className="btn-primary">
-              📧 Email Receipt
+            <button className="btn-primary" onClick={handleDownloadReceipt}>
+              📧 Download Receipt
             </button>
           </div>
 

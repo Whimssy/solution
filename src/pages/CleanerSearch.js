@@ -1,68 +1,28 @@
-// src/pages/CleanerSearch.js
 import React, { useState, useEffect } from 'react';
-import CleanerCard from '../components/booking/CleanerCard';
+import CleanerCard from '../components/booking/CleanerCard/CleanerCard';
 import './CleanerSearch.css';
 
 const CleanerSearch = () => {
   const [cleaners, setCleaners] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedService, setSelectedService] = useState('all');
+  const [priceRange, setPriceRange] = useState([0, 100]);
+  const [sortBy, setSortBy] = useState('rating');
+  const [loading, setLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Mock data for cleaners
+  // Fetch cleaners from API
   useEffect(() => {
     const fetchCleaners = async () => {
+      setLoading(true);
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // TODO: Replace with actual API call
+        // const response = await fetch('/api/cleaners');
+        // const data = await response.json();
+        // setCleaners(data);
         
-        const mockCleaners = [
-          {
-            id: 1,
-            name: 'Jane Wanjiku',
-            rating: '4.8',
-            reviews: 127,
-            location: 'Westlands, Nairobi',
-            experience: '3 years',
-            services: 'Home & Office Cleaning',
-            price: 1200,
-            image: null
-          },
-          {
-            id: 2,
-            name: 'Mary Achieng',
-            rating: '4.9',
-            reviews: 89,
-            location: 'Kilimani, Nairobi',
-            experience: '4 years',
-            services: 'Deep Cleaning, Laundry',
-            price: 1500,
-            image: null
-          },
-          {
-            id: 3,
-            name: 'Grace Muthoni',
-            rating: '4.7',
-            reviews: 203,
-            location: 'Karen, Nairobi',
-            experience: '5 years',
-            services: 'All Home Services',
-            price: 1800,
-            image: null
-          },
-          {
-            id: 4,
-            name: 'Susan Akinyi',
-            rating: '4.6',
-            reviews: 76,
-            location: 'Lavington, Nairobi',
-            experience: '2 years',
-            services: 'Standard Cleaning',
-            price: 1000,
-            image: null
-          }
-        ];
-        
-        setCleaners(mockCleaners);
+        // For now, set empty array - will be populated by real API
+        setCleaners([]);
       } catch (error) {
         console.error('Error fetching cleaners:', error);
       } finally {
@@ -73,17 +33,54 @@ const CleanerSearch = () => {
     fetchCleaners();
   }, []);
 
-  const filteredCleaners = cleaners.filter(cleaner =>
-    cleaner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cleaner.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cleaner.services.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Get all unique services for filter
+  const allServices = ['all', ...new Set(cleaners.flatMap(cleaner => cleaner.services))];
+
+  // Filter and sort cleaners
+  const filteredCleaners = cleaners
+    .filter(cleaner => {
+      const matchesSearch = 
+        cleaner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cleaner.services.some(service => 
+          service.toLowerCase().includes(searchTerm.toLowerCase())
+        ) ||
+        cleaner.location.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesService = selectedService === 'all' || 
+        cleaner.services.includes(selectedService);
+
+      const matchesPrice = cleaner.price >= priceRange[0] && 
+        cleaner.price <= priceRange[1];
+
+      return matchesSearch && matchesService && matchesPrice;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'price-low':
+          return a.price - b.price;
+        case 'price-high':
+          return b.price - a.price;
+        case 'rating':
+          return b.rating - a.rating;
+        case 'experience':
+          return parseInt(b.experience) - parseInt(a.experience);
+        default:
+          return b.rating - a.rating;
+      }
+    });
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedService('all');
+    setPriceRange([0, 100]);
+    setSortBy('rating');
+  };
 
   if (loading) {
     return (
-      <div className="cleaner-search">
+      <div className="cleaner-search-page">
         <div className="loading-container">
-          <div className="loading-spinner"></div>
+          <div className="spinner"></div>
           <p>Finding the best cleaners for you...</p>
         </div>
       </div>
@@ -91,53 +88,132 @@ const CleanerSearch = () => {
   }
 
   return (
-    <div className="cleaner-search">
-      <div className="search-container">
-        <div className="search-header">
-          <h1>Find Your Perfect Cleaner</h1>
-          <p>Browse through our verified and rated cleaning professionals</p>
+    <div className="cleaner-search-page">
+      <div className="search-header">
+        <div className="header-content">
+          <h1>Find Professional Cleaners</h1>
+          <p>Book trusted cleaners in your area</p>
         </div>
-
-        {/* Search Bar */}
-        <div className="search-bar">
-          <input
-            type="text"
-            placeholder="Search by name, location, or service..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
-
-        {/* Results Count */}
-        <div className="results-info">
-          <p>
-            Found {filteredCleaners.length} cleaner{filteredCleaners.length !== 1 ? 's' : ''}
-            {searchTerm && ` for "${searchTerm}"`}
-          </p>
-        </div>
-
-        {/* Cleaners Grid */}
-        {filteredCleaners.length === 0 ? (
-          <div className="no-results">
-            <div className="empty-icon">🔍</div>
-            <h3>No cleaners found</h3>
-            <p>Try adjusting your search terms or browse all cleaners</p>
-            <button 
-              onClick={() => setSearchTerm('')}
-              className="btn-primary"
-            >
-              Show All Cleaners
-            </button>
+        
+        <div className="search-controls">
+          <div className="search-bar-container">
+            <div className="search-input-wrapper">
+              <span className="search-icon">🔍</span>
+              <input
+                type="text"
+                placeholder="Search by name, service, or location..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+              />
+              {searchTerm && (
+                <button 
+                  className="clear-search"
+                  onClick={() => setSearchTerm('')}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
-        ) : (
-          <div className="cleaners-grid">
-            {filteredCleaners.map(cleaner => (
-              <CleanerCard key={cleaner.id} cleaner={cleaner} />
-            ))}
+
+          <div className="control-buttons">
+            <button 
+              className={`filter-btn ${showFilters ? 'active' : ''}`}
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              🎛️ Filters
+            </button>
+            <select 
+              value={sortBy} 
+              onChange={(e) => setSortBy(e.target.value)}
+              className="sort-select"
+            >
+              <option value="rating">Sort by: Rating</option>
+              <option value="price-low">Sort by: Price Low to High</option>
+              <option value="price-high">Sort by: Price High to Low</option>
+              <option value="experience">Sort by: Experience</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Advanced Filters */}
+        {showFilters && (
+          <div className="advanced-filters">
+            <div className="filter-section">
+              <label>Service Type</label>
+              <select 
+                value={selectedService} 
+                onChange={(e) => setSelectedService(e.target.value)}
+                className="filter-select"
+              >
+                {allServices.map(service => (
+                  <option key={service} value={service}>
+                    {service === 'all' ? 'All Services' : service}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-section">
+              <label>Price Range: KSh {priceRange[0]} - {priceRange[1]}</label>
+              <div className="price-slider">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={priceRange[0]}
+                  onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
+                  className="slider"
+                />
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={priceRange[1]}
+                  onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                  className="slider"
+                />
+              </div>
+            </div>
+
+            <div className="filter-actions">
+              <button className="clear-filters" onClick={clearFilters}>
+                Clear All Filters
+              </button>
+            </div>
           </div>
         )}
       </div>
+
+      {/* Results Info */}
+      <div className="results-info">
+        <p>
+          Found {filteredCleaners.length} cleaner{filteredCleaners.length !== 1 ? 's' : ''}
+          {searchTerm && ` for "${searchTerm}"`}
+        </p>
+      </div>
+
+      {/* Cleaners Grid */}
+      <div className="cleaners-grid">
+        {filteredCleaners.map(cleaner => (
+          <CleanerCard key={cleaner.id} cleaner={cleaner} />
+        ))}
+      </div>
+
+      {/* No Results */}
+      {filteredCleaners.length === 0 && !loading && (
+        <div className="no-results">
+          <div className="no-results-content">
+            <span className="no-results-icon">🔍</span>
+            <h3>No cleaners found</h3>
+            <p>Try adjusting your search criteria or filters</p>
+            <button className="reset-search" onClick={clearFilters}>
+              Reset Search
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

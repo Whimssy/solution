@@ -1,174 +1,317 @@
-// src/pages/Dashboard.js
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import Navbar from '../components/layout/Navbar';
+import Footer from '../components/layout/Footer';
+import './Dashboard.css';
 
 const Dashboard = () => {
-  const { user, loading } = useAuth();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Route constants for maintainability
-  const ROUTES = {
-    SEARCH: '/search',
-    REFERRAL: '/referral',
-    SETTINGS: '/settings'
+  // Safe user data access
+  const safeUser = currentUser || { id: 'guest', name: 'Guest' };
+
+  // Memoized data loading function
+  const loadUserData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      let userBookings = [];
+      
+      try {
+        const storedBookings = localStorage.getItem('madeasy_bookings');
+        if (storedBookings) {
+          const parsedBookings = JSON.parse(storedBookings);
+          userBookings = parsedBookings
+            .filter(booking => booking.userId === safeUser.id)
+            .slice(0, 3)
+            .reverse();
+        }
+      } catch (storageError) {
+        console.warn('Error reading localStorage:', storageError);
+      }
+      
+      setRecentBookings(userBookings);
+
+    } catch (err) {
+      console.error('Error loading dashboard data:', err);
+      setError('Failed to load dashboard data. Please try refreshing the page.');
+    } finally {
+      setLoading(false);
+    }
+  }, [safeUser.id]);
+
+  useEffect(() => {
+    let mounted = true;
+    
+    const initializeDashboard = async () => {
+      if (mounted) {
+        await loadUserData();
+      }
+    };
+
+    initializeDashboard();
+
+    return () => {
+      mounted = false;
+    };
+  }, [loadUserData]);
+
+  const quickActions = [
+    {
+      icon: '🔍',
+      title: 'Find Cleaners',
+      description: 'Book professional cleaning services',
+      action: () => navigate('/search'),
+      color: '#4CAF50',
+      gradient: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)'
+    },
+    {
+      icon: '👥',
+      title: 'Become a Cleaner',
+      description: 'Start earning on our platform',
+      action: () => navigate('/become-cleaner'),
+      color: '#FF9800',
+      gradient: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)'
+    },
+    {
+      icon: '📤',
+      title: 'Refer & Earn',
+      description: 'Share with friends and earn rewards',
+      action: () => navigate('/referrals'),
+      color: '#9C27B0',
+      gradient: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)'
+    }
+  ];
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return '#28a745';
+      case 'confirmed': return '#17a2b8';
+      case 'pending_payment': return '#ffc107';
+      case 'cancelled': return '#dc3545';
+      default: return '#6c757d';
+    }
   };
 
-  // Handle loading state
-  if (loading) {
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'completed': return 'Completed';
+      case 'confirmed': return 'Confirmed';
+      case 'pending_payment': return 'Payment Pending';
+      case 'cancelled': return 'Cancelled';
+      default: return status || 'Unknown';
+    }
+  };
+
+  const handleActionClick = (action) => {
+    try {
+      action();
+    } catch (err) {
+      console.error('Error executing action:', err);
+      setError('Action failed. Please try again.');
+    }
+  };
+
+  const handleRetry = () => {
+    loadUserData();
+  };
+
+  // Error boundary fallback
+  if (error) {
     return (
-      <div className="dashboard">
-        <div className="loading">Loading your dashboard...</div>
+      <div className="dashboard-wrapper">
+        <Navbar />
+        <div className="error-state">
+          <div className="error-icon">⚠️</div>
+          <h3>Something went wrong</h3>
+          <p>{error}</p>
+          <button className="btn btn-primary" onClick={handleRetry}>
+            Try Again
+          </button>
+        </div>
+        <Footer />
       </div>
     );
   }
 
-  // Handle case where user might not be available
-  if (!user) {
+  if (loading) {
     return (
-      <div className="dashboard">
-        <div className="error-message">
-          <h2>User not found</h2>
-          <p>Please log in to access your dashboard.</p>
-          <button onClick={() => navigate('/')} className="btn-primary">
-            Go to Login
-          </button>
+      <div className="dashboard-wrapper">
+        <Navbar />
+        <div className="dashboard-loading">
+          <div className="spinner"></div>
+          <p>Loading your dashboard...</p>
         </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <h1>Welcome, {user.name || 'User'}!</h1>
-        <p className="dashboard-subtitle">
-          {user.type === 'admin' ? 'Admin Dashboard - Manage the platform' :
-           user.type === 'cleaner' ? 'Cleaner Dashboard - Manage your services' :
-           'Manage your cleaning services'}
-        </p>
-      </header>
+    <div className="dashboard-wrapper">
+      <Navbar />
       
-      <div className="dashboard-cards">
-        {/* Book a Cleaner Card - Only for clients */}
-        {(user.type === 'client' || !user.type) && (
-          <div className="card" role="region" aria-label="Book cleaning service">
-            <div className="card-icon">🧹</div>
-            <h3 className="card-title">Book a Cleaner</h3>
-            <p>Find and book professional cleaning services</p>
-            <button 
-              onClick={() => navigate(ROUTES.SEARCH)} 
-              className="btn-primary"
-              aria-label="Navigate to cleaner search page"
-            >
-              Book Now
-            </button>
-          </div>
-        )}
-
-        {/* Cleaner Services Card - Only for cleaners */}
-        {user.type === 'cleaner' && (
-          <div className="card" role="region" aria-label="Manage cleaning services">
-            <div className="card-icon">👨‍💼</div>
-            <h3 className="card-title">My Services</h3>
-            <p>Manage your cleaning appointments and availability</p>
-            <button 
-              onClick={() => navigate('/cleaner-dashboard')} 
-              className="btn-primary"
-            >
-              Manage Services
-            </button>
-          </div>
-        )}
-
-        {/* Admin Panel Card - Only for admins */}
-        {user.type === 'admin' && (
-          <div className="card" role="region" aria-label="Admin panel">
-            <div className="card-icon">⚙️</div>
-            <h3 className="card-title">Admin Panel</h3>
-            <p>Manage users, cleaners, and platform settings</p>
-            <button 
-              onClick={() => navigate('/admin')} 
-              className="btn-primary"
-            >
-              Admin Dashboard
-            </button>
-          </div>
-        )}
-
-        {/* My Bookings Card - For all users */}
-        <div className="card" role="region" aria-label="View your bookings">
-          <div className="card-icon">📅</div>
-          <h3 className="card-title">My Bookings</h3>
-          <p>View your upcoming and past bookings</p>
-          <button 
-            onClick={() => navigate('/bookings')} 
-            className="btn-secondary"
-            aria-label="Navigate to bookings page"
-          >
-            View Bookings
-          </button>
-        </div>
-
-        {/* Refer & Earn Card */}
-        <div className="card" role="region" aria-label="Referral program">
-          <div className="card-icon">👥</div>
-          <h3 className="card-title">Refer & Earn</h3>
-          <p>Refer cleaners to friends and earn rewards</p>
-          <button 
-            onClick={() => navigate(ROUTES.REFERRAL)} 
-            className="btn-primary"
-            aria-label="Navigate to referral program page"
-          >
-            Refer Now
-          </button>
-        </div>
-
-        {/* Account Settings Card */}
-        <div className="card" role="region" aria-label="Account settings">
-          <div className="card-icon">🔧</div>
-          <h3 className="card-title">Account Settings</h3>
-          <p>Manage your profile and preferences</p>
-          <button 
-            onClick={() => navigate(ROUTES.SETTINGS)} 
-            className="btn-secondary"
-            aria-label="Navigate to settings page"
-          >
-            Settings
-          </button>
-        </div>
-
-        {/* Quick Stats Card */}
-        <div className="card stats-card" role="region" aria-label="User statistics">
-          <div className="card-icon">📊</div>
-          <h3 className="card-title">Quick Stats</h3>
-          <div className="stats-grid">
-            <div className="stat-item">
-              <span className="stat-number">0</span>
-              <span className="stat-label">Bookings</span>
+      <div className="dashboard">
+        <div className="dashboard-container">
+          {/* Header Section */}
+          <div className="dashboard-header">
+            <div className="welcome-section">
+              <h1>Welcome to MADEASY {safeUser.name}! 👋</h1>
+              <p>ITS CLEANING O'CLOCK SOMEWHERE</p>
+              <p>Request your cleaner by clicks</p>
             </div>
-            <div className="stat-item">
-              <span className="stat-number">0</span>
-              <span className="stat-label">Referrals</span>
+            <div className="header-actions">
+              <button 
+                className="btn btn-primary"
+                onClick={() => navigate('/search')}
+              >
+                Book New Cleaning
+              </button>
             </div>
-            <div className="stat-item">
-              <span className="stat-number">0</span>
-              <span className="stat-label">Rewards</span>
+          </div>
+
+          {/* Quick Actions Grid */}
+          <div className="quick-actions-section">
+            <div className="section-header">
+              <h2>Quick Actions</h2>
+              <p>Get things done quickly with these shortcuts</p>
             </div>
+            <div className="quick-actions-grid">
+              {quickActions.map((action, index) => (
+                <div
+                  key={index}
+                  className="quick-action-card"
+                  onClick={() => handleActionClick(action.action)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handleActionClick(action.action);
+                    }
+                  }}
+                >
+                  <div 
+                    className="action-icon"
+                    style={{ background: action.gradient }}
+                  >
+                    {action.icon}
+                  </div>
+                  <div className="action-content">
+                    <h3>{action.title}</h3>
+                    <p>{action.description}</p>
+                  </div>
+                  <div className="action-arrow">→</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Bookings Section */}
+          <div className="recent-bookings-section">
+            <div className="section-header">
+              <div>
+                <h2>Recent Bookings</h2>
+                <p>Your latest cleaning appointments</p>
+              </div>
+              {recentBookings.length > 0 && (
+                <button 
+                  className="btn btn-outline"
+                  onClick={() => navigate('/bookings')}
+                >
+                  View All Bookings
+                </button>
+              )}
+            </div>
+
+            {recentBookings.length > 0 ? (
+              <div className="bookings-grid">
+                {recentBookings.map(booking => (
+                  <div key={booking.id} className="booking-card">
+                    <div className="booking-header">
+                      <h4>{booking.serviceType || 'Cleaning Service'}</h4>
+                      <span 
+                        className="status-badge"
+                        style={{ backgroundColor: getStatusColor(booking.status) }}
+                      >
+                        {getStatusText(booking.status)}
+                      </span>
+                    </div>
+                    
+                    <div className="booking-details">
+                      <div className="detail-item">
+                        <span className="detail-label">Cleaner:</span>
+                        <span className="detail-value">{booking.cleanerName || 'Not assigned'}</span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="detail-label">Date & Time:</span>
+                        <span className="detail-value">
+                          {booking.date || 'TBD'} at {booking.time || 'TBD'}
+                        </span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="detail-label">Duration:</span>
+                        <span className="detail-value">{booking.duration || 0} hours</span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="detail-label">Address:</span>
+                        <span className="detail-value">{booking.address || 'Address not specified'}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="booking-footer">
+                      <div className="booking-amount">
+                        KSh {(booking.total || 0).toLocaleString()}
+                      </div>
+                      <div className="booking-actions">
+                        {booking.status === 'pending_payment' && (
+                          <button 
+                            className="btn btn-warning"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/payment/${booking.id}`);
+                            }}
+                          >
+                            Complete Payment
+                          </button>
+                        )}
+                        <button 
+                          className="btn btn-outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/booking/${booking.id}`);
+                          }}
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <div className="empty-icon">📋</div>
+                <h3>No Bookings Yet</h3>
+                <p>You haven't made any bookings yet. Start by finding a cleaner!</p>
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => navigate('/search')}
+                >
+                  Find a Cleaner
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Recent Activity Section */}
-      <div className="recent-activity">
-        <h2>Recent Activity</h2>
-        <div className="activity-list">
-          <div className="activity-item">
-            <p>Welcome to Madeasy! Start by booking your first cleaner.</p>
-            <span className="activity-time">Just now</span>
-          </div>
-        </div>
-      </div>
+      <Footer />
     </div>
   );
 };

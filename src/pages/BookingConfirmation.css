@@ -10,12 +10,12 @@
   margin: 0 auto;
   background: white;
   border-radius: 20px;
-  overflow: hidden;
   box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  overflow: hidden;
 }
 
 .success-header {
-  background: linear-gradient(135deg, #28a745, #20c997);
+  background: linear-gradient(135deg, #4CAF50, #45a049);
   color: white;
   padding: 40px 30px;
   text-align: center;
@@ -40,8 +40,8 @@
 .booking-id {
   background: rgba(255,255,255,0.2);
   padding: 10px 20px;
-  border-radius: 25px;
-  font-weight: 600;
+  border-radius: 50px;
+  font-weight: bold;
   display: inline-block;
 }
 
@@ -54,24 +54,20 @@
 .payment-info-card,
 .next-steps-card,
 .support-card {
-  background: white;
-  border: 2px solid #f8f9fa;
+  background: #f8f9fa;
   border-radius: 15px;
   padding: 25px;
   margin-bottom: 20px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  border: 1px solid #e9ecef;
 }
 
 .booking-details-card h3,
 .cleaner-info-card h3,
 .payment-info-card h3,
 .next-steps-card h3 {
-  margin-top: 0;
-  margin-bottom: 20px;
+  margin: 0 0 20px 0;
   color: #333;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 1.3rem;
 }
 
 .details-grid {
@@ -82,42 +78,44 @@
 
 .detail-item {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #e9ecef;
 }
 
 .detail-item.full-width {
   grid-column: 1 / -1;
 }
 
-.label {
-  color: #666;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.value {
-  color: #333;
+.detail-item .label {
   font-weight: 600;
+  color: #666;
 }
 
-.value.amount {
-  color: #28a745;
+.detail-item .value {
+  color: #333;
+  text-align: right;
+}
+
+.detail-item .amount {
+  font-weight: bold;
+  color: #4CAF50;
   font-size: 1.1rem;
 }
 
 .cleaner-details {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 20px;
 }
 
 .cleaner-avatar {
   width: 60px;
   height: 60px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #007bff, #0056b3);
+  background: #007bff;
   color: white;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -133,10 +131,10 @@
 .cleaner-meta {
   display: flex;
   gap: 15px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
-.cleaner-meta span {
+.rating, .phone {
   font-size: 0.9rem;
   color: #666;
 }
@@ -144,7 +142,6 @@
 .cleaner-note {
   margin: 0;
   color: #666;
-  font-size: 0.9rem;
   font-style: italic;
 }
 
@@ -159,15 +156,19 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
 }
 
-.payment-item:last-child {
-  border-bottom: none;
+.payment-item .label {
+  font-weight: 600;
+  color: #666;
+}
+
+.payment-item .value {
+  color: #333;
 }
 
 .status-success {
-  color: #28a745;
+  color: #4CAF50;
   font-weight: bold;
 }
 
@@ -196,111 +197,87 @@
   flex-shrink: 0;
 }
 
-.step-content {
-  flex: 1;
-}
-
 .step-content strong {
-  color: #333;
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
+  color: #333;
 }
 
 .step-content p {
   margin: 0;
   color: #666;
-  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .confirmation-actions {
   display: flex;
   gap: 15px;
-  justify-content: center;
   margin: 30px 0;
   flex-wrap: wrap;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;
-  border: none;
+.btn-primary, .btn-secondary, .btn-outline {
   padding: 15px 25px;
-  border-radius: 8px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  transition: all 0.3s ease;
+  flex: 1;
+  min-width: 200px;
+}
+
+.btn-primary {
+  background: #007bff;
+  color: white;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #0056b3, #004085);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  background: #0056b3;
 }
 
 .btn-secondary {
-  background: #28a745;
-  color: white;
-  border: none;
-  padding: 15px 25px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-secondary:hover {
-  background: #218838;
-  transform: translateY(-2px);
-}
-
-.btn-outline {
-  background: white;
-  color: #6c757d;
-  border: 2px solid #6c757d;
-  padding: 15px 25px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-outline:hover {
   background: #6c757d;
   color: white;
 }
 
-.support-card {
-  text-align: center;
-  background: #f8f9fa;
-  border: 2px dashed #dee2e6;
+.btn-secondary:hover {
+  background: #545b62;
+}
+
+.btn-outline {
+  background: transparent;
+  color: #007bff;
+  border: 2px solid #007bff;
+}
+
+.btn-outline:hover {
+  background: #007bff;
+  color: white;
 }
 
 .support-card h4 {
-  margin-top: 0;
+  margin: 0 0 10px 0;
   color: #333;
 }
 
 .support-card p {
+  margin: 0 0 20px 0;
   color: #666;
-  margin-bottom: 20px;
 }
 
 .support-contacts {
   display: flex;
-  justify-content: center;
-  gap: 30px;
+  gap: 20px;
   flex-wrap: wrap;
 }
 
 .contact-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #666;
-  font-weight: 500;
+  gap: 10px;
+  color: #333;
 }
 
 .contact-item .icon {
@@ -309,18 +286,6 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .confirmation-page {
-    padding: 15px;
-  }
-  
-  .success-header {
-    padding: 30px 20px;
-  }
-  
-  .success-header h1 {
-    font-size: 2rem;
-  }
-  
   .confirmation-content {
     padding: 20px;
   }
@@ -333,44 +298,12 @@
     flex-direction: column;
   }
   
-  .btn-primary,
-  .btn-secondary,
-  .btn-outline {
-    width: 100%;
-    justify-content: center;
+  .btn-primary, .btn-secondary, .btn-outline {
+    min-width: auto;
   }
   
   .support-contacts {
     flex-direction: column;
-    gap: 15px;
-  }
-  
-  .cleaner-details {
-    flex-direction: column;
-    text-align: center;
+    gap: 10px;
   }
 }
-
-/* Animation */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.booking-details-card,
-.cleaner-info-card,
-.payment-info-card,
-.next-steps-card {
-  animation: fadeInUp 0.6s ease-out;
-}
-
-.booking-details-card { animation-delay: 0.1s; }
-.cleaner-info-card { animation-delay: 0.2s; }
-.payment-info-card { animation-delay: 0.3s; }
-.next-steps-card { animation-delay: 0.4s; }

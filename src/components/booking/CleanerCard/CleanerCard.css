@@ -1,0 +1,256 @@
+.cleaner-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 20px;
+  transition: all 0.3s ease;
+  border: 1px solid #f0f0f0;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.cleaner-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  border-color: #4CAF50;
+}
+
+.cleaner-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.cleaner-image {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5em;
+  color: white;
+}
+
+.verified-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: #4CAF50;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7em;
+  font-weight: bold;
+  border: 2px solid white;
+}
+
+.cleaner-basic-info {
+  flex: 1;
+}
+
+.cleaner-name {
+  color: #2c5530;
+  margin: 0 0 8px 0;
+  font-size: 1.2em;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.cleaner-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.location, .experience {
+  color: #666;
+  font-size: 0.85em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cleaner-rating {
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.rating-stars {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.stars {
+  color: #FFD700;
+  font-weight: 600;
+  font-size: 0.95em;
+}
+
+.reviews {
+  color: #666;
+  font-size: 0.85em;
+}
+
+.completed-jobs {
+  color: #666;
+  font-size: 0.8em;
+  background: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.cleaner-services {
+  margin-bottom: 20px;
+}
+
+.services-label {
+  color: #666;
+  font-size: 0.85em;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.services-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.service-tag {
+  background: #e8f5e8;
+  color: #2c5530;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75em;
+  font-weight: 500;
+  border: 1px solid #d4edda;
+}
+
+.service-tag.more {
+  background: #f8f9fa;
+  color: #666;
+  border-color: #e9ecef;
+}
+
+.cleaner-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 15px;
+}
+
+.price-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.price {
+  font-size: 1.3em;
+  font-weight: bold;
+  color: #2c5530;
+  line-height: 1;
+}
+
+.price-note {
+  color: #666;
+  font-size: 0.75em;
+  margin-top: 2px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-outline, .btn-primary {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  white-space: nowrap;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid #e0e0e0;
+  color: #666;
+}
+
+.btn-outline:hover {
+  border-color: #4CAF50;
+  color: #4CAF50;
+  background: #f8fff8;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #45a049, #3d8b40);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .cleaner-card {
+    padding: 15px;
+  }
+  
+  .cleaner-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .price-section {
+    text-align: center;
+  }
+  
+  .action-buttons {
+    justify-content: stretch;
+  }
+  
+  .btn-outline, .btn-primary {
+    flex: 1;
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cleaner-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+  
+  .cleaner-meta {
+    align-items: center;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+}
