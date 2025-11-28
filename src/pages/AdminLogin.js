@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import adminService from '../services/adminService';
 import './AdminLogin.css';
 
 const AdminLogin = () => {
@@ -19,50 +20,34 @@ const AdminLogin = () => {
     try {
       console.log('🔐 Attempting admin login...');
       
-      const response = await fetch('http://localhost:5000/api/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const data = await adminService.login(formData);
 
-      console.log('📡 Response status:', response.status);
-      const data = await response.json();
       console.log('📡 Full response:', data);
 
       if (data.success) {
         console.log('🎉 LOGIN SUCCESSFUL!');
         
         // Store everything
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('madeasy_user', JSON.stringify(data.admin));
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
+        if (data.admin) {
+          localStorage.setItem('madeasy_user', JSON.stringify(data.admin));
+        }
         
         console.log('💾 Stored in localStorage:');
         console.log('   Token:', localStorage.getItem('token') ? '✅' : '❌');
         console.log('   User:', localStorage.getItem('madeasy_user') ? '✅' : '❌');
         
-        // Test if dashboard route exists
-        console.log('🔍 Checking if dashboard route exists...');
-        const dashboardResponse = await fetch('/admin/dashboard');
-        console.log('📊 Dashboard route status:', dashboardResponse.status);
-        
-        if (dashboardResponse.status === 200) {
-          console.log('✅ Dashboard route exists! Redirecting...');
-          window.location.href = '/admin/dashboard';
-        } else {
-          console.log('❌ Dashboard route returned status:', dashboardResponse.status);
-          console.log('🚀 Attempting redirect anyway...');
-          window.location.href = '/admin/dashboard';
-        }
-        
+        // Redirect to dashboard
+        navigate('/admin/dashboard');
       } else {
         console.log('❌ Login failed:', data.message);
         setError(data.message || 'Login failed');
       }
     } catch (error) {
       console.error('💥 NETWORK ERROR:', error);
-      setError('Cannot connect to server. Make sure backend is running.');
+      setError(error.message || 'Cannot connect to server. Make sure backend is running.');
     } finally {
       setLoading(false);
     }

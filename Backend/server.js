@@ -9,6 +9,10 @@ require('dotenv').config();
 // Import database connection
 const connectDB = require('./config/database');
 
+// Import logger
+const logger = require('./utils/logger');
+const { requestLogger, logEvent } = require('./middleware/logger');
+
 // Initialize Express app
 const app = express();
 
@@ -22,6 +26,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
+
+// Request logging middleware (must be after morgan but before routes)
+app.use(requestLogger);
 
 // Test Routes
 app.get('/', (req, res) => {
@@ -42,9 +49,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ✅ ADD THIS: API Routes
+// ✅ API Routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/admin', require('./routes/admin')); // ✅ Add admin routes
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/bookings', require('./routes/booking'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/cleaners', require('./routes/cleaner'));
 
 // 404 Handler
 app.use('*', (req, res) => {
@@ -56,22 +66,32 @@ app.use('*', (req, res) => {
 
 // Error Handler
 app.use((err, req, res, next) => {
-  console.error('Error:', err.message);
+  logger.error('Unhandled error:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method
+  });
+  
   res.status(500).json({
     success: false,
     message: 'Server Error',
-    error: err.message
+    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
   });
 });
 
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log('\n' + '='.repeat(50));
-  console.log('🚀 MAMAFUA BACKEND SERVER STARTED');
-  console.log('='.repeat(50));
-  console.log(`📍 Port: ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV}`);
-  console.log(`📍 URL: http://localhost:${PORT}`);
-  console.log('='.repeat(50));
+  logger.info('🚀 MAMAFUA BACKEND SERVER STARTED', {
+    port: PORT,
+    environment: process.env.NODE_ENV,
+    url: `http://localhost:${PORT}`
+  });
+  
+  // Log server startup for admin panel
+  logEvent('info', 'Server started', {
+    port: PORT,
+    environment: process.env.NODE_ENV
+  });
 });

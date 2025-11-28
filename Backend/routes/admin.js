@@ -1,64 +1,61 @@
 const express = require('express');
-const Admin = require('../models/Admin'); // ✅ Correct path
 const router = express.Router();
+const {
+  adminLogin,
+  getDashboardStats,
+  getPendingCleaners,
+  reviewCleaner,
+  getAllBookings,
+  getLogs,
+  getLogStats,
+  getLogById,
+  deleteLogs
+} = require('../controllers/AdminControllers');
+const { protect, authorize } = require('../middleware/auth');
 
-// Simple admin login route
-router.post('/login', async (req, res) => {
-  try {
-    console.log('🔐 Admin login attempt received');
-    const { email, password } = req.body;
+// @desc    Admin login
+// @route   POST /api/admin/login
+// @access  Public
+router.post('/login', adminLogin);
 
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide email and password'
-      });
-    }
+// @desc    Get dashboard stats
+// @route   GET /api/admin/dashboard
+// @access  Private/Admin
+router.get('/dashboard', protect, authorize('admin', 'super_admin'), getDashboardStats);
 
-    console.log('🔍 Searching for admin:', email);
-    const admin = await Admin.findOne({ email }).select('+password');
-    
-    if (!admin) {
-      console.log('❌ Admin not found');
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
+// @desc    Get pending cleaner applications
+// @route   GET /api/admin/cleaners/pending
+// @access  Private/Admin
+router.get('/cleaners/pending', protect, authorize('admin', 'super_admin'), getPendingCleaners);
 
-    console.log('✅ Admin found, checking password...');
-    const isMatch = await admin.matchPassword(password);
-    
-    if (!isMatch) {
-      console.log('❌ Password incorrect');
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
+// @desc    Review cleaner application
+// @route   PUT /api/admin/cleaners/:id/review
+// @access  Private/Admin
+router.put('/cleaners/:id/review', protect, authorize('admin', 'super_admin'), reviewCleaner);
 
-    console.log('🎉 Login successful, generating token...');
-    const token = admin.getSignedJwtToken();
+// @desc    Get all bookings
+// @route   GET /api/admin/bookings
+// @access  Private/Admin
+router.get('/bookings', protect, authorize('admin', 'super_admin'), getAllBookings);
 
-    res.json({
-      success: true,
-      message: 'Admin login successful',
-      token,
-      admin: {
-        id: admin._id,
-        name: admin.name,
-        email: admin.email,
-        role: admin.role
-      }
-    });
+// @desc    Get all logs with filters
+// @route   GET /api/admin/logs
+// @access  Private/Super Admin only
+router.get('/logs', protect, authorize('super_admin'), getLogs);
 
-  } catch (error) {
-    console.error('💥 Server error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error: ' + error.message
-    });
-  }
-});
+// @desc    Get log statistics
+// @route   GET /api/admin/logs/stats
+// @access  Private/Super Admin only
+router.get('/logs/stats', protect, authorize('super_admin'), getLogStats);
+
+// @desc    Get a specific log by ID
+// @route   GET /api/admin/logs/:id
+// @access  Private/Super Admin only
+router.get('/logs/:id', protect, authorize('super_admin'), getLogById);
+
+// @desc    Delete logs (bulk delete with filters)
+// @route   DELETE /api/admin/logs
+// @access  Private/Super Admin only
+router.delete('/logs', protect, authorize('super_admin'), deleteLogs);
 
 module.exports = router;

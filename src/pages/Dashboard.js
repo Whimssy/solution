@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/layout/Navbar';
-import Footer from '../components/layout/Footer';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -126,7 +124,6 @@ const Dashboard = () => {
   if (error) {
     return (
       <div className="dashboard-wrapper">
-        <Navbar />
         <div className="error-state">
           <div className="error-icon">⚠️</div>
           <h3>Something went wrong</h3>
@@ -135,7 +132,6 @@ const Dashboard = () => {
             Try Again
           </button>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -143,20 +139,16 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="dashboard-wrapper">
-        <Navbar />
         <div className="dashboard-loading">
           <div className="spinner"></div>
           <p>Loading your dashboard...</p>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div className="dashboard-wrapper">
-      <Navbar />
-      
       <div className="dashboard">
         <div className="dashboard-container">
           {/* Header Section */}
@@ -310,8 +302,6 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-
-      <Footer />
     </div>
   );
 };

@@ -78,6 +78,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const value = {
+    user: currentUser,
     currentUser,
     otpLogin,
     verifyOtp,

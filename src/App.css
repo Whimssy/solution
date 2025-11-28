@@ -26,6 +26,19 @@ body {
   flex-direction: column;
 }
 
+/* Main Content - Account for fixed navbar */
+.main-content {
+  padding-top: 70px;
+  flex: 1;
+}
+
+/* Responsive padding for mobile navbar */
+@media (max-width: 768px) {
+  .main-content {
+    padding-top: 64px;
+  }
+}
+
 /* Container Styles */
 .container {
   width: 100%;

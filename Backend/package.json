@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "mongo-admin": "node scripts/mongo-admin.js",
+    "test:cleaner-save": "node scripts/testCleanerSave.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -17,9 +19,12 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.5.0",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "winston": "^3.18.3",
+    "winston-mongodb": "^7.0.1"
   },
   "devDependencies": {
+    "mongo-express": "1.1.0-rc-3",
     "nodemon": "^3.0.1"
   }
 }

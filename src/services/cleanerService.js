@@ -1,123 +1,16 @@
 // src/services/cleanerService.js
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
-
-// Request timeout configuration
-const REQUEST_TIMEOUT = 8000;
-
-// Helper function for fetch with timeout
-const fetchWithTimeout = async (url, options = {}, timeout = REQUEST_TIMEOUT) => {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    clearTimeout(id);
-    return response;
-  } catch (error) {
-    clearTimeout(id);
-    if (error.name === 'AbortError') {
-      throw new Error('Request timeout - Please try again');
-    }
-    throw error;
-  }
-};
-
-// Mock data matching your original screenshot structure
-const MOCK_CLEANERS = [
-  {
-    id: '1',
-    name: 'Sarah Achini',
-    photo: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-    rating: 4.8,
-    reviewCount: 127,
-    bio: 'Professional home cleaner with expertise in ironing and laundry services. Detail-oriented and reliable.',
-    location: 'Kilimani',
-    experience: '2 years',
-    jobsCompleted: 89,
-    specialties: ['Ironing', 'Laundry'],
-    availability: '1 week',
-    hourlyRate: 800,
-    languages: ['English', 'Swahili'],
-    available: true,
-    verified: true,
-    reviews: [
-      { id: 1, rating: 5, comment: 'Sarah is amazing! My clothes have never looked better.', author: 'Mary K.', date: '2024-01-10' },
-      { id: 2, rating: 4, comment: 'Good service, very professional and punctual.', author: 'James M.', date: '2024-01-05' }
-    ]
-  },
-  {
-    id: '2',
-    name: 'John Kamau',
-    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-    rating: 4.6,
-    reviewCount: 89,
-    bio: 'Office cleaning specialist with move-in cleaning expertise. Thorough and efficient service guaranteed.',
-    location: 'Nairobi CBD',
-    experience: '3 years',
-    jobsCompleted: 89,
-    specialties: ['Move-in Cleaning', 'Office Cleaning'],
-    availability: 'Immediate',
-    hourlyRate: 750,
-    languages: ['English', 'Swahili'],
-    available: true,
-    verified: true,
-    reviews: [
-      { id: 1, rating: 5, comment: 'John cleaned our new office perfectly! Highly recommended.', author: 'Tech Solutions Ltd', date: '2024-01-12' },
-      { id: 2, rating: 4, comment: 'Good move-in cleaning service.', author: 'Sarah W.', date: '2024-01-08' }
-    ]
-  },
-  {
-    id: '3',
-    name: 'Karen Mose-in',
-    photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-    rating: 4.9,
-    reviewCount: 156,
-    bio: 'Window cleaning expert with 5 years of experience. Crystal clear results every time.',
-    location: 'Westlands',
-    experience: '5 years',
-    jobsCompleted: 89,
-    specialties: ['Window Cleaning'],
-    availability: '12+ weeks',
-    hourlyRate: 900,
-    languages: ['English'],
-    available: false,
-    verified: true,
-    reviews: [
-      { id: 1, rating: 5, comment: 'Karen made our windows sparkle! Worth every shilling.', author: 'David L.', date: '2024-01-15' },
-      { id: 2, rating: 5, comment: 'Professional and thorough window cleaning service.', author: 'Grace N.', date: '2024-01-03' }
-    ]
-  },
-  {
-    id: '4',
-    name: 'James Muriodi',
-    photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-    rating: 4.7,
-    reviewCount: 94,
-    bio: 'Experienced ironing specialist with attention to detail. Your clothes are in good hands.',
-    location: 'Lunday',
-    experience: '6 years',
-    jobsCompleted: 89,
-    specialties: ['Ironing'],
-    availability: 'Immediate',
-    hourlyRate: 700,
-    languages: ['Swahili'],
-    available: true,
-    verified: false,
-    reviews: [
-      { id: 1, rating: 4, comment: 'Good ironing service, reasonable prices.', author: 'Mike T.', date: '2024-01-14' },
-      { id: 2, rating: 5, comment: 'James is the best for ironing! Very careful with delicate fabrics.', author: 'Anna P.', date: '2024-01-09' }
-    ]
-  }
-];
+import { apiRequest, handleResponse } from '../config/api';
 
 // Cache for search results
 let searchCache = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export const cleanerService = {
+  /**
+   * Search for cleaners with filters
+   * @param {object} filters - Search filters (city, state, serviceType, minRating, maxPrice, isAvailable, page, limit)
+   * @returns {Promise<object>} - Search results
+   */
   async searchCleaners(filters = {}) {
     try {
       // Generate cache key based on filters
@@ -128,69 +21,45 @@ export const cleanerService = {
         return cached.data;
       }
 
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 400));
+      // Build query string from filters
+      const queryParams = new URLSearchParams();
+      if (filters.city) queryParams.append('city', filters.city);
+      if (filters.state) queryParams.append('state', filters.state);
+      if (filters.serviceType) queryParams.append('serviceType', filters.serviceType);
+      if (filters.minRating) queryParams.append('minRating', filters.minRating);
+      if (filters.maxPrice) queryParams.append('maxPrice', filters.maxPrice);
+      if (filters.isAvailable !== undefined) queryParams.append('isAvailable', filters.isAvailable);
+      if (filters.page) queryParams.append('page', filters.page);
+      if (filters.limit) queryParams.append('limit', filters.limit);
 
-      let results = [...MOCK_CLEANERS];
+      const queryString = queryParams.toString();
+      const endpoint = `/cleaners${queryString ? `?${queryString}` : ''}`;
 
-      // Apply filters
-      if (filters.location) {
-        results = results.filter(cleaner => 
-          cleaner.location.toLowerCase().includes(filters.location.toLowerCase())
-        );
-      }
+      const response = await apiRequest(endpoint, {
+        method: 'GET',
+      });
 
-      if (filters.minRating) {
-        results = results.filter(cleaner => cleaner.rating >= filters.minRating);
-      }
-
-      if (filters.availability) {
-        results = results.filter(cleaner => cleaner.available);
-      }
-
-      if (filters.specialties && filters.specialties.length > 0) {
-        results = results.filter(cleaner =>
-          filters.specialties.some(specialty =>
-            cleaner.specialties.some(s => 
-              s.toLowerCase().includes(specialty.toLowerCase())
-            )
-          )
-        );
-      }
-
-      if (filters.maxHourlyRate) {
-        results = results.filter(cleaner => cleaner.hourlyRate <= filters.maxHourlyRate);
-      }
-
-      if (filters.verifiedOnly) {
-        results = results.filter(cleaner => cleaner.verified);
-      }
-
-      // Sort results (default by rating)
-      const sortBy = filters.sortBy || 'rating';
-      switch (sortBy) {
-        case 'rating':
-          results.sort((a, b) => b.rating - a.rating);
-          break;
-        case 'experience':
-          results.sort((a, b) => {
-            const aExp = parseInt(a.experience) || 0;
-            const bExp = parseInt(b.experience) || 0;
-            return bExp - aExp;
-          });
-          break;
-        case 'price_low':
-          results.sort((a, b) => a.hourlyRate - b.hourlyRate);
-          break;
-        case 'price_high':
-          results.sort((a, b) => b.hourlyRate - a.hourlyRate);
-          break;
-        case 'jobs_completed':
-          results.sort((a, b) => b.jobsCompleted - a.jobsCompleted);
-          break;
-        default:
-          results.sort((a, b) => b.rating - a.rating);
-      }
+      const data = await handleResponse(response);
+      
+      // Transform API response to match expected format
+      const results = (data.data || []).map(cleaner => ({
+        id: cleaner._id || cleaner.id,
+        name: cleaner.user?.name || cleaner.name,
+        photo: cleaner.user?.profilePhoto || cleaner.photo,
+        rating: cleaner.rating?.average || cleaner.rating || 0,
+        reviewCount: cleaner.rating?.count || cleaner.reviewCount || 0,
+        bio: cleaner.bio || '',
+        location: cleaner.user?.address?.city || cleaner.location || '',
+        experience: cleaner.experience || 0,
+        jobsCompleted: cleaner.servicesCompleted || cleaner.jobsCompleted || 0,
+        specialties: cleaner.specialties || [],
+        availability: cleaner.isAvailable ? 'Available' : 'Unavailable',
+        hourlyRate: cleaner.hourlyRate || 0,
+        languages: cleaner.languages || [],
+        available: cleaner.isAvailable !== false,
+        verified: cleaner.isVerified !== false,
+        reviews: cleaner.reviews || [],
+      }));
 
       // Cache the results
       searchCache.set(cacheKey, {
@@ -198,137 +67,211 @@ export const cleanerService = {
         timestamp: Date.now()
       });
 
-      return results;
+      return {
+        cleaners: results,
+        count: data.count || results.length,
+        total: data.total || results.length,
+        page: data.page || 1,
+        pages: data.pages || 1,
+      };
     } catch (error) {
       console.error('Search cleaners error:', error);
       throw new Error('Failed to search cleaners. Please try again.');
     }
   },
 
+  /**
+   * Get cleaner by ID
+   * @param {string} cleanerId - Cleaner ID
+   * @returns {Promise<object>} - Cleaner details
+   */
   async getCleanerById(cleanerId) {
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const response = await apiRequest(`/cleaners/${cleanerId}`, {
+        method: 'GET',
+      });
 
-      const cleaner = MOCK_CLEANERS.find(c => c.id === cleanerId);
-      if (!cleaner) {
-        throw new Error('Cleaner not found');
-      }
+      const data = await handleResponse(response);
+      const cleaner = data.data || data;
 
-      return cleaner;
+      // Transform API response to match expected format
+      return {
+        id: cleaner._id || cleaner.id,
+        name: cleaner.user?.name || cleaner.name,
+        photo: cleaner.user?.profilePhoto || cleaner.photo,
+        rating: cleaner.rating?.average || cleaner.rating || 0,
+        reviewCount: cleaner.rating?.count || cleaner.reviewCount || 0,
+        bio: cleaner.bio || '',
+        location: cleaner.user?.address?.city || cleaner.location || '',
+        experience: cleaner.experience || 0,
+        jobsCompleted: cleaner.servicesCompleted || cleaner.jobsCompleted || 0,
+        specialties: cleaner.specialties || [],
+        availability: cleaner.isAvailable ? 'Available' : 'Unavailable',
+        hourlyRate: cleaner.hourlyRate || 0,
+        languages: cleaner.languages || [],
+        available: cleaner.isAvailable !== false,
+        verified: cleaner.isVerified !== false,
+        reviews: cleaner.reviews || [],
+        address: cleaner.user?.address || cleaner.address,
+        email: cleaner.user?.email || cleaner.email,
+        phone: cleaner.user?.phone || cleaner.phone,
+      };
     } catch (error) {
       console.error('Get cleaner error:', error);
-      throw new Error('Failed to get cleaner details.');
+      throw new Error(error.message || 'Failed to get cleaner details.');
     }
   },
 
+  /**
+   * Get cleaner reviews
+   * @param {string} cleanerId - Cleaner ID
+   * @param {number} page - Page number
+   * @param {number} limit - Items per page
+   * @returns {Promise<object>} - Reviews data
+   */
   async getCleanerReviews(cleanerId, page = 1, limit = 10) {
     try {
-      await new Promise(resolve => setTimeout(resolve, 200));
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
 
-      const cleaner = MOCK_CLEANERS.find(c => c.id === cleanerId);
-      if (!cleaner) {
-        throw new Error('Cleaner not found');
-      }
+      const response = await apiRequest(`/cleaners/${cleanerId}/reviews?${queryParams}`, {
+        method: 'GET',
+      });
 
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedReviews = cleaner.reviews.slice(startIndex, endIndex);
-
+      const data = await handleResponse(response);
+      
       return {
-        reviews: paginatedReviews,
-        totalReviews: cleaner.reviews.length,
-        currentPage: page,
-        totalPages: Math.ceil(cleaner.reviews.length / limit),
-        hasMore: endIndex < cleaner.reviews.length
+        reviews: data.data?.reviews || data.reviews || [],
+        totalReviews: data.data?.totalReviews || data.totalReviews || 0,
+        currentPage: data.page || page,
+        totalPages: data.pages || Math.ceil((data.totalReviews || 0) / limit),
+        hasMore: (data.page || page) < (data.pages || 1),
       };
     } catch (error) {
       console.error('Get cleaner reviews error:', error);
-      throw new Error('Failed to load reviews.');
+      // If reviews endpoint doesn't exist, return empty reviews
+      return {
+        reviews: [],
+        totalReviews: 0,
+        currentPage: page,
+        totalPages: 0,
+        hasMore: false,
+      };
     }
   },
 
+  /**
+   * Add a review for a cleaner
+   * @param {string} cleanerId - Cleaner ID
+   * @param {object} review - Review data (rating, comment, author)
+   * @returns {Promise<object>} - Created review
+   */
   async addCleanerReview(cleanerId, review) {
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const response = await apiRequest(`/cleaners/${cleanerId}/reviews`, {
+        method: 'POST',
+        body: JSON.stringify({
+          rating: review.rating,
+          comment: review.comment,
+          author: review.author || 'Anonymous',
+        }),
+      });
 
-      const cleaner = MOCK_CLEANERS.find(c => c.id === cleanerId);
-      if (!cleaner) {
-        throw new Error('Cleaner not found');
-      }
-
-      const newReview = {
-        id: Date.now(),
-        rating: review.rating,
-        comment: review.comment,
-        author: review.author || 'Anonymous',
-        date: new Date().toISOString().split('T')[0]
-      };
-
-      cleaner.reviews.unshift(newReview);
-      
-      // Update rating (simple average)
-      const totalRating = cleaner.reviews.reduce((sum, r) => sum + r.rating, 0);
-      cleaner.rating = Number((totalRating / cleaner.reviews.length).toFixed(1));
-      cleaner.reviewCount = cleaner.reviews.length;
-
-      return newReview;
+      const data = await handleResponse(response);
+      return data.data || data;
     } catch (error) {
       console.error('Add review error:', error);
-      throw new Error('Failed to add review.');
+      throw new Error(error.message || 'Failed to add review.');
     }
   },
 
+  /**
+   * Get available specialties (from cleaners)
+   * @returns {Promise<array>} - List of specialties
+   */
   async getAvailableSpecialties() {
     try {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Get all cleaners and extract specialties
+      const response = await apiRequest('/cleaners?limit=100', {
+        method: 'GET',
+      });
+
+      const data = await handleResponse(response);
+      const cleaners = data.data || [];
 
       const specialties = new Set();
-      MOCK_CLEANERS.forEach(cleaner => {
-        cleaner.specialties.forEach(specialty => {
-          specialties.add(specialty);
-        });
+      cleaners.forEach(cleaner => {
+        if (cleaner.specialties && Array.isArray(cleaner.specialties)) {
+          cleaner.specialties.forEach(specialty => {
+            specialties.add(specialty);
+          });
+        }
       });
 
       return Array.from(specialties).sort();
     } catch (error) {
       console.error('Get specialties error:', error);
-      return ['Ironing', 'Laundry', 'Window Cleaning', 'Office Cleaning', 'Move-in Cleaning'];
+      // Return default specialties as fallback
+      return ['residential', 'commercial', 'deep_cleaning', 'move_in_out', 'office', 'post_construction'];
     }
   },
 
+  /**
+   * Get popular locations (from cleaners)
+   * @returns {Promise<array>} - List of locations
+   */
   async getPopularLocations() {
     try {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Get all cleaners and extract locations
+      const response = await apiRequest('/cleaners?limit=100', {
+        method: 'GET',
+      });
 
-      const locations = [...new Set(MOCK_CLEANERS.map(cleaner => cleaner.location))];
-      return locations.sort();
+      const data = await handleResponse(response);
+      const cleaners = data.data || [];
+
+      const locations = new Set();
+      cleaners.forEach(cleaner => {
+        const city = cleaner.user?.address?.city || cleaner.location;
+        if (city) {
+          locations.add(city);
+        }
+      });
+
+      return Array.from(locations).sort();
     } catch (error) {
       console.error('Get locations error:', error);
-      return ['Nairobi CBD', 'Kilimani', 'Westlands', 'Lunday'];
+      // Return default locations as fallback
+      return ['Nairobi', 'Mombasa', 'Kisumu'];
     }
   },
 
+  /**
+   * Check cleaner availability
+   * @param {string} cleanerId - Cleaner ID
+   * @param {string} date - Date to check
+   * @param {string} time - Time to check
+   * @returns {Promise<object>} - Availability status
+   */
   async checkCleanerAvailability(cleanerId, date, time) {
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const response = await apiRequest(`/cleaners/${cleanerId}/availability`, {
+        method: 'POST',
+        body: JSON.stringify({ date, time }),
+      });
 
-      const cleaner = MOCK_CLEANERS.find(c => c.id === cleanerId);
-      if (!cleaner) {
-        throw new Error('Cleaner not found');
-      }
-
-      // Simulate availability check (80% chance of being available)
-      const isAvailable = Math.random() > 0.2;
-      
-      return {
-        available: isAvailable,
-        nextAvailable: isAvailable ? null : 'Tomorrow at 2:00 PM',
-        message: isAvailable ? 'Available for booking' : 'Fully booked for selected time'
-      };
+      const data = await handleResponse(response);
+      return data.data || data;
     } catch (error) {
       console.error('Check availability error:', error);
-      throw new Error('Failed to check availability.');
+      // Return default availability if endpoint doesn't exist
+      return {
+        available: true,
+        nextAvailable: null,
+        message: 'Available for booking',
+      };
     }
   },
 
@@ -337,29 +280,105 @@ export const cleanerService = {
     searchCache.clear();
   },
 
-  // Get service statistics
+  /**
+   * Get service statistics
+   * @returns {Promise<object>} - Service statistics
+   */
   async getServiceStats() {
     try {
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Get all cleaners to calculate stats
+      const response = await apiRequest('/cleaners?limit=1000', {
+        method: 'GET',
+      });
 
-      const totalCleaners = MOCK_CLEANERS.length;
-      const totalJobs = MOCK_CLEANERS.reduce((sum, cleaner) => sum + cleaner.jobsCompleted, 0);
-      const averageRating = Number((
-        MOCK_CLEANERS.reduce((sum, cleaner) => sum + cleaner.rating, 0) / totalCleaners
-      ).toFixed(1));
+      const data = await handleResponse(response);
+      const cleaners = data.data || [];
+
+      const totalCleaners = cleaners.length;
+      const totalJobs = cleaners.reduce((sum, cleaner) => sum + (cleaner.servicesCompleted || 0), 0);
+      const totalRating = cleaners.reduce((sum, cleaner) => {
+        const rating = cleaner.rating?.average || cleaner.rating || 0;
+        return sum + rating;
+      }, 0);
+      const averageRating = totalCleaners > 0 ? Number((totalRating / totalCleaners).toFixed(1)) : 0;
+      const availableCleaners = cleaners.filter(c => c.isAvailable !== false).length;
+      const topRatedCleaner = cleaners.length > 0 
+        ? cleaners.reduce((top, current) => {
+            const topRating = top.rating?.average || top.rating || 0;
+            const currentRating = current.rating?.average || current.rating || 0;
+            return currentRating > topRating ? current : top;
+          })
+        : null;
 
       return {
         totalCleaners,
         totalJobs,
         averageRating,
-        availableCleaners: MOCK_CLEANERS.filter(c => c.available).length,
-        topRatedCleaner: MOCK_CLEANERS.reduce((top, current) => 
-          current.rating > top.rating ? current : top
-        )
+        availableCleaners,
+        topRatedCleaner: topRatedCleaner ? {
+          id: topRatedCleaner._id || topRatedCleaner.id,
+          name: topRatedCleaner.user?.name || topRatedCleaner.name,
+          rating: topRatedCleaner.rating?.average || topRatedCleaner.rating || 0,
+        } : null,
       };
     } catch (error) {
       console.error('Get stats error:', error);
-      throw new Error('Failed to load service statistics.');
+      throw new Error(error.message || 'Failed to load service statistics.');
+    }
+  },
+
+  /**
+   * Apply to become a cleaner
+   * @param {object} applicationData - Cleaner application data
+   * @returns {Promise<object>} - Application response
+   */
+  async applyAsCleaner(applicationData) {
+    try {
+      const response = await apiRequest('/cleaners/apply', {
+        method: 'POST',
+        body: JSON.stringify(applicationData),
+      });
+
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Apply as cleaner error:', error);
+      throw new Error(error.message || 'Failed to submit cleaner application');
+    }
+  },
+
+  /**
+   * Update cleaner profile
+   * @param {object} profileData - Profile data to update
+   * @returns {Promise<object>} - Updated profile
+   */
+  async updateCleanerProfile(profileData) {
+    try {
+      const response = await apiRequest('/cleaners/me', {
+        method: 'PUT',
+        body: JSON.stringify(profileData),
+      });
+
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Update cleaner profile error:', error);
+      throw new Error(error.message || 'Failed to update cleaner profile');
+    }
+  },
+
+  /**
+   * Get cleaner's bookings
+   * @returns {Promise<object>} - Cleaner's bookings
+   */
+  async getCleanerBookings() {
+    try {
+      const response = await apiRequest('/cleaners/me/bookings', {
+        method: 'GET',
+      });
+
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Get cleaner bookings error:', error);
+      throw new Error(error.message || 'Failed to fetch cleaner bookings');
     }
   }
 };

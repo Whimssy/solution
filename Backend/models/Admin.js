@@ -44,11 +44,12 @@ const adminSchema = new mongoose.Schema({
 // Encrypt password using bcrypt
 adminSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {
-    next();
+    return next();
   }
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+  next();
 });
 
 // Sign JWT and return
@@ -67,5 +68,10 @@ adminSchema.methods.getSignedJwtToken = function() {
 adminSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
+
+// Indexes for optimized queries
+adminSchema.index({ email: 1 }); // Unique index already exists, but ensure it's indexed
+adminSchema.index({ role: 1 }); // Index for role-based queries
+adminSchema.index({ isActive: 1, role: 1 }); // Compound index for filtering active admins by role
 
 module.exports = mongoose.model('Admin', adminSchema);
