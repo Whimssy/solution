@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const Admin = require('./models/Admin');
+const Admin = require('../models/Admin');
+const logger = require('../utils/logger');
+const { logError } = require('./logger');
 
 exports.protect = async (req, res, next) => {
   let token;
@@ -18,29 +20,41 @@ exports.protect = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('🔐 Decoded token:', decoded); // Debug log
+    logger.debug('🔐 Token decoded', { userId: decoded.id, role: decoded.role });
     
     // ✅ FIXED: Use decoded.id (not decoded._id)
     if (decoded.role === 'admin' || decoded.role === 'super_admin') {
       req.user = await Admin.findById(decoded.id);
-      console.log('👤 Found admin:', req.user ? req.user.email : 'Not found');
+      if (!req.user) {
+        logger.warn('Admin not found in database', { adminId: decoded.id });
+      }
     } else {
       req.user = await User.findById(decoded.id);
-      console.log('👤 Found user:', req.user ? req.user.email : 'Not found');
+      if (!req.user) {
+        logger.warn('User not found in database', { userId: decoded.id });
+      }
     }
 
     if (!req.user) {
-      console.log('❌ User not found in database');
+      logger.warn('❌ User not found in database', { userId: decoded.id, role: decoded.role });
       return res.status(401).json({
         success: false,
         message: 'User not found'
       });
     }
 
-    console.log('✅ Auth successful for:', req.user.email);
+    logger.debug('✅ Auth successful', { 
+      userId: req.user._id || req.user.id, 
+      email: req.user.email,
+      role: req.user.role 
+    });
     next();
   } catch (err) {
-    console.error('❌ JWT verification error:', err.message);
+    logError(err, {
+      path: req.path,
+      method: req.method,
+      ip: req.ip
+    });
     return res.status(401).json({
       success: false,
       message: 'Not authorized to access this route'

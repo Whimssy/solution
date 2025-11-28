@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const Admin = require('./models/Admin');
+const Admin = require('../models/Admin');
 
 const createAdmin = async () => {
   try {

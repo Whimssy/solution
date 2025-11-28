@@ -1,6 +1,37 @@
-# Getting Started with Create React App
+# MadEasy - Cleaning Service Platform
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+## Environment Configuration
+
+Create a `.env` file in the root directory with the following variables:
+
+```env
+# API Configuration
+# Base URL for the backend API
+# Default: http://localhost:5000/api
+REACT_APP_API_URL=http://localhost:5000/api
+```
+
+The frontend uses this environment variable to route all API calls to the backend. If not set, it defaults to `http://localhost:5000/api`.
+
+## API Services
+
+The frontend uses centralized API services located in `src/services/`:
+
+- **authService.js** - Authentication (register, login, getCurrentUser, etc.)
+- **adminService.js** - Admin operations (login, dashboard stats, review cleaners, etc.)
+- **bookingService.js** - Booking operations (create, get, update, cancel bookings)
+- **userService.js** - User profile operations (get profile, update profile, get bookings)
+- **cleanerService.js** - Cleaner operations (search, get by ID, apply, update profile)
+- **paymentService.js** - Payment processing (existing)
+- **referralService.js** - Referral operations (existing)
+
+All services use the centralized API configuration from `src/config/api.js` which handles:
+- Base URL from environment variable
+- Authentication headers
+- Request timeouts
+- Error handling
 
 ## Available Scripts
 

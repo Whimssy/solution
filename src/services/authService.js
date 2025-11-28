@@ -1,46 +1,28 @@
 // services/authService.js
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+import { apiRequest, handleResponse, getToken as getApiToken } from '../config/api';
 
-// Request timeout configuration
-const REQUEST_TIMEOUT = 10000; // 10 seconds
-
-// Helper function for fetch with timeout
-const fetchWithTimeout = async (url, options = {}, timeout = REQUEST_TIMEOUT) => {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    clearTimeout(id);
-    return response;
-  } catch (error) {
-    clearTimeout(id);
-    if (error.name === 'AbortError') {
-      throw new Error('Request timeout - Please check your internet connection');
-    }
-    throw error;
-  }
-};
-
-// Storage keys
+// Storage keys - support both old and new keys for compatibility
 const STORAGE_KEYS = {
-  TOKEN: 'cleanify_token',
+  TOKEN: 'token', // Primary token storage
+  ALT_TOKEN: 'cleanify_token', // Alternative token storage
   REFRESH_TOKEN: 'cleanify_refresh_token',
-  USER_DATA: 'cleanify_user_data',
+  USER_DATA: 'madeasy_user', // Primary user data storage
+  ALT_USER_DATA: 'cleanify_user_data', // Alternative user data storage
   TOKEN_EXPIRY: 'cleanify_token_expiry'
 };
 
 // Token management
 const tokenService = {
   getToken() {
-    return localStorage.getItem(STORAGE_KEYS.TOKEN);
+    // Check both storage keys for compatibility
+    return localStorage.getItem(STORAGE_KEYS.TOKEN) || 
+           localStorage.getItem(STORAGE_KEYS.ALT_TOKEN);
   },
 
   setToken(token) {
+    // Store in both keys for compatibility
     localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+    localStorage.setItem(STORAGE_KEYS.ALT_TOKEN, token);
   },
 
   getRefreshToken() {
@@ -52,11 +34,15 @@ const tokenService = {
   },
 
   setUserData(user) {
+    // Store in both keys for compatibility
     localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+    localStorage.setItem(STORAGE_KEYS.ALT_USER_DATA, JSON.stringify(user));
   },
 
   getUserData() {
-    const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+    // Check both storage keys for compatibility
+    const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA) || 
+                     localStorage.getItem(STORAGE_KEYS.ALT_USER_DATA);
     return userData ? JSON.parse(userData) : null;
   },
 
@@ -83,6 +69,64 @@ const tokenService = {
 };
 
 export const authService = {
+  /**
+   * Register a new user
+   * @param {object} userData - User registration data (name, email, password, phone)
+   * @returns {Promise<object>} - Registration response with token and user data
+   */
+  async register(userData) {
+    try {
+      const response = await apiRequest('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      });
+      
+      const data = await handleResponse(response);
+      
+      // Store token and user data
+      if (data.token) {
+        tokenService.setToken(data.token);
+      }
+      if (data.user) {
+        tokenService.setUserData(data.user);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Register error:', error);
+      throw new Error(error.message || 'Failed to register');
+    }
+  },
+
+  /**
+   * Login user
+   * @param {object} credentials - Login credentials (email, password)
+   * @returns {Promise<object>} - Login response with token and user data
+   */
+  async login(credentials) {
+    try {
+      const response = await apiRequest('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      });
+      
+      const data = await handleResponse(response);
+      
+      // Store token and user data
+      if (data.token) {
+        tokenService.setToken(data.token);
+      }
+      if (data.user) {
+        tokenService.setUserData(data.user);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw new Error(error.message || 'Failed to login');
+    }
+  },
+
   async sendOtp(phoneNumber) {
     try {
       // Validate phone number format
@@ -90,22 +134,14 @@ export const authService = {
         throw new Error('Please enter a valid phone number');
       }
 
-      const response = await fetchWithTimeout(`${API_BASE_URL}/auth/send-otp`, {
+      const response = await apiRequest('/auth/send-otp', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ 
           phoneNumber: phoneNumber.replace(/\D/g, '') // Remove non-digit characters
         }),
       });
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Failed to send OTP: ${response.status}`);
-      }
-      
-      const data = await response.json();
+      const data = await handleResponse(response);
       
       // Store OTP verification ID if provided by backend
       if (data.verificationId) {
@@ -127,11 +163,8 @@ export const authService = {
 
       const verificationId = sessionStorage.getItem('otp_verification_id');
       
-      const response = await fetchWithTimeout(`${API_BASE_URL}/auth/verify-otp`, {
+      const response = await apiRequest('/auth/verify-otp', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ 
           phoneNumber: phoneNumber.replace(/\D/g, ''),
           otp,
@@ -139,12 +172,7 @@ export const authService = {
         }),
       });
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `OTP verification failed: ${response.status}`);
-      }
-      
-      const data = await response.json();
+      const data = await handleResponse(response);
       
       // Store tokens and user data
       if (data.token) {
@@ -179,19 +207,12 @@ export const authService = {
         throw new Error('No refresh token available');
       }
 
-      const response = await fetchWithTimeout(`${API_BASE_URL}/auth/refresh-token`, {
+      const response = await apiRequest('/auth/refresh-token', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ refreshToken }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to refresh token');
-      }
-
-      const data = await response.json();
+      const data = await handleResponse(response);
       
       // Update tokens
       if (data.token) {
@@ -228,31 +249,21 @@ export const authService = {
 
       // Refresh token if expired
       if (tokenService.isTokenExpired()) {
-        await this.refreshToken();
+        try {
+          await this.refreshToken();
+        } catch (refreshError) {
+          // If refresh fails, try to get user anyway
+        }
       }
 
-      const response = await fetchWithTimeout(`${API_BASE_URL}/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${tokenService.getToken()}`,
-        },
+      const response = await apiRequest('/auth/me', {
+        method: 'GET',
       });
       
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Token is invalid, try to refresh
-          try {
-            await this.refreshToken();
-            // Retry the request with new token
-            return await this.getCurrentUser();
-          } catch (refreshError) {
-            this.logout();
-            return null;
-          }
-        }
-        throw new Error(`Failed to get user data: ${response.status}`);
-      }
+      const data = await handleResponse(response);
       
-      const userData = await response.json();
+      // Store user data (response may have data wrapper)
+      const userData = data.data || data;
       tokenService.setUserData(userData);
       return userData;
     } catch (error) {
@@ -270,23 +281,16 @@ export const authService = {
         throw new Error('Authentication required');
       }
 
-      const response = await fetchWithTimeout(`${API_BASE_URL}/auth/profile`, {
+      // Use userService for profile updates (matches backend route)
+      const response = await apiRequest('/users/me', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify(profileData),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Failed to update profile: ${response.status}`);
-      }
-
-      const updatedUser = await response.json();
+      const data = await handleResponse(response);
       
       // Update cached user data
+      const updatedUser = data.data || data;
       tokenService.setUserData(updatedUser);
       
       return updatedUser;
@@ -303,21 +307,12 @@ export const authService = {
         throw new Error('Authentication required');
       }
 
-      const response = await fetchWithTimeout(`${API_BASE_URL}/auth/update-password`, {
+      const response = await apiRequest('/auth/update-password', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Failed to update password: ${response.status}`);
-      }
-
-      return await response.json();
+      return await handleResponse(response);
     } catch (error) {
       console.error('Update password error:', error);
       throw new Error(error.message || 'Failed to update password');
@@ -326,22 +321,14 @@ export const authService = {
 
   async resendOtp(phoneNumber) {
     try {
-      const response = await fetchWithTimeout(`${API_BASE_URL}/auth/resend-otp`, {
+      const response = await apiRequest('/auth/resend-otp', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ 
           phoneNumber: phoneNumber.replace(/\D/g, '')
         }),
       });
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Failed to resend OTP: ${response.status}`);
-      }
-      
-      const data = await response.json();
+      const data = await handleResponse(response);
       
       // Update verification ID if provided
       if (data.verificationId) {
@@ -367,11 +354,8 @@ export const authService = {
     // Optional: Call logout endpoint to invalidate token on server
     const token = tokenService.getToken();
     if (token) {
-      fetch(`${API_BASE_URL}/auth/logout`, {
+      apiRequest('/auth/logout', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
       }).catch(error => {
         console.error('Logout API call failed:', error);
       });
@@ -386,6 +370,11 @@ export const authService = {
   getAuthHeaders() {
     const token = tokenService.getToken();
     return token ? { 'Authorization': `Bearer ${token}` } : {};
+  },
+
+  // Get token service for external use
+  getTokenService() {
+    return tokenService;
   }
 };
 
