@@ -71,6 +71,7 @@ export const cleanerService = {
 
       return {
         cleaners: results,
+        data: results, // Also include as 'data' for consistency
         count: data.count || results.length,
         total: data.total || results.length,
         page: data.page || 1,

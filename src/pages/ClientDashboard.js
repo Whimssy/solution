@@ -9,6 +9,13 @@ const ClientDashboard = () => {
   const navigate = useNavigate();
   const [upcomingBookings, setUpcomingBookings] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
+  const [stats, setStats] = useState({
+    totalBookings: 0,
+    upcomingBookings: 0,
+    completedBookings: 0,
+    totalSpent: 0,
+    favoriteCleaners: 0
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -70,6 +77,27 @@ const ClientDashboard = () => {
       
       setRecentBookings(recent);
       setUpcomingBookings(upcoming);
+
+      // Calculate stats
+      const completed = allBookings.filter(b => b.status === 'completed');
+      const totalSpent = completed.reduce((sum, b) => {
+        return sum + ((b.pricing?.totalAmount || b.total) || 0);
+      }, 0);
+
+      // Count unique cleaners
+      const uniqueCleaners = new Set(
+        allBookings
+          .map(b => b.cleaner?._id || b.cleanerId)
+          .filter(id => id)
+      );
+
+      setStats({
+        totalBookings: allBookings.length,
+        upcomingBookings: upcoming.length,
+        completedBookings: completed.length,
+        totalSpent,
+        favoriteCleaners: uniqueCleaners.size
+      });
 
     } catch (err) {
       console.error('Error loading dashboard data:', err);
@@ -329,6 +357,80 @@ const ClientDashboard = () => {
                 >
                   Sign Up Now
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Stats Grid */}
+          {currentUser && (
+            <div className="quick-stats-section">
+              <div className="section-header">
+                <div>
+                  <h2>Overview</h2>
+                  <p>Your booking activity at a glance</p>
+                </div>
+              </div>
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div 
+                    className="stat-icon"
+                    style={{ background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)' }}
+                  >
+                    📅
+                  </div>
+                  <div className="stat-content">
+                    <div className="stat-number">{stats.totalBookings}</div>
+                    <div className="stat-label">Total Bookings</div>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div 
+                    className="stat-icon"
+                    style={{ background: 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)' }}
+                  >
+                    ⏳
+                  </div>
+                  <div className="stat-content">
+                    <div className="stat-number">{stats.upcomingBookings}</div>
+                    <div className="stat-label">Upcoming Bookings</div>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div 
+                    className="stat-icon"
+                    style={{ background: 'linear-gradient(135deg, #27ae60 0%, #229954 100%)' }}
+                  >
+                    ✅
+                  </div>
+                  <div className="stat-content">
+                    <div className="stat-number">{stats.completedBookings}</div>
+                    <div className="stat-label">Completed</div>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div 
+                    className="stat-icon"
+                    style={{ background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)' }}
+                  >
+                    💰
+                  </div>
+                  <div className="stat-content">
+                    <div className="stat-number">KSh {stats.totalSpent.toLocaleString()}</div>
+                    <div className="stat-label">Total Spent</div>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div 
+                    className="stat-icon"
+                    style={{ background: 'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)' }}
+                  >
+                    👥
+                  </div>
+                  <div className="stat-content">
+                    <div className="stat-number">{stats.favoriteCleaners}</div>
+                    <div className="stat-label">Cleaners Used</div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

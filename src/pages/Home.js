@@ -42,22 +42,25 @@ const Home = () => {
           limit: 100 // Get a reasonable number of cleaners
         });
         
-        // Transform cleaners to include availability schedule and working hours
-        const transformedCleaners = (result.cleaners || []).map(cleaner => ({
+        // The cleanerService already transforms the data, so use result.cleaners directly
+        const cleanersArray = result.cleaners || result.data || [];
+        
+        // The cleanerService already does the transformation, so we can use the data directly
+        // But we need to ensure all required fields are present
+        const transformedCleaners = cleanersArray.map(cleaner => ({
           id: cleaner.id,
-          name: cleaner.name,
-          photo: cleaner.photo,
-          rating: cleaner.rating || 0,
-          reviews: cleaner.reviewCount || cleaner.reviews || 0,
+          name: cleaner.name || 'Unknown Cleaner',
+          photo: cleaner.photo || '👨‍💼',
+          rating: typeof cleaner.rating === 'number' ? cleaner.rating : (cleaner.rating?.average || 0),
+          reviews: cleaner.reviewCount || cleaner.reviews?.length || 0,
           services: cleaner.specialties || [],
           price: cleaner.hourlyRate || 0,
           hourlyRate: cleaner.hourlyRate || 0,
           location: cleaner.location || '',
           experience: cleaner.experience || 0,
           completedJobs: cleaner.jobsCompleted || 0,
-          verified: cleaner.verified || false,
+          verified: cleaner.verified !== false,
           available: cleaner.available !== false,
-          // Include full availability schedule and working hours
           availabilitySchedule: cleaner.availabilitySchedule || {},
           workingHours: cleaner.workingHours || { start: '08:00', end: '17:00' },
           bio: cleaner.bio || ''
@@ -75,7 +78,7 @@ const Home = () => {
         }
       } catch (error) {
         console.error('Error fetching cleaners:', error);
-        setError('Failed to load cleaners. Please try again later.');
+        setError(`Failed to load cleaners: ${error.message || 'Please try again later.'}`);
         setCleaners([]);
       } finally {
         setLoading(false);
@@ -294,13 +297,26 @@ const Home = () => {
         )}
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="error-banner">
+          <span className="error-icon">⚠️</span>
+          <span>{error}</span>
+          <button onClick={() => window.location.reload()} className="retry-btn">
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Results Info */}
-      <div className="results-info">
-        <p>
-          Found {filteredCleaners.length} cleaner{filteredCleaners.length !== 1 ? 's' : ''}
-          {searchTerm && ` for "${searchTerm}"`}
-        </p>
-      </div>
+      {!error && (
+        <div className="results-info">
+          <p>
+            Found {filteredCleaners.length} cleaner{filteredCleaners.length !== 1 ? 's' : ''}
+            {searchTerm && ` for "${searchTerm}"`}
+          </p>
+        </div>
+      )}
 
       {/* Cleaners Grid */}
       <div className="cleaners-grid">

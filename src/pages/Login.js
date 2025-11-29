@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import './Login.css';
 
 const Login = () => {
@@ -13,6 +13,7 @@ const Login = () => {
   const [message, setMessage] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -43,7 +44,9 @@ const Login = () => {
       if (result.success) {
         setMessage('Login successful! Redirecting...');
         setTimeout(() => {
-          navigate('/');
+          // Redirect to returnUrl if provided, otherwise go to home
+          const returnUrl = searchParams.get('returnUrl');
+          navigate(returnUrl ? decodeURIComponent(returnUrl) : '/', { replace: true });
         }, 1500);
       } else {
         setError(result.error || 'Login failed. Please check your credentials.');

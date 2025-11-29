@@ -38,15 +38,10 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               
+              {/* Public Routes */}
+              <Route path="/" element={<Home />} />
+              
               {/* Protected Client Routes */}
-              <Route 
-                path="/" 
-                element={
-                  <ProtectedRoute>
-                    <Home />
-                  </ProtectedRoute>
-                } 
-              />
               <Route 
                 path="/dashboard" 
                 element={<Dashboard />}

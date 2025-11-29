@@ -1,9 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 import './CleanerCard.css';
 
 const CleanerCard = ({ cleaner }) => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
 
   const handleViewProfile = () => {
     navigate(`/cleaner/${cleaner.id}`);
@@ -11,6 +13,21 @@ const CleanerCard = ({ cleaner }) => {
 
   const handleBookNow = (e) => {
     e.stopPropagation(); // Prevent triggering the card click
+    
+    // Check if user is authenticated
+    if (!currentUser) {
+      // Redirect to login with return URL
+      const returnUrl = encodeURIComponent(`/book/${cleaner.id}`);
+      navigate(`/login?returnUrl=${returnUrl}`);
+      return;
+    }
+    
+    // Check if user is a cleaner (cleaners cannot book other cleaners)
+    if (currentUser.role === 'cleaner') {
+      alert('Cleaners cannot book other cleaners. Please use a regular user account to make bookings.');
+      return;
+    }
+    
     navigate(`/book/${cleaner.id}`, {
       state: {
         serviceType: cleaner.services[0],
@@ -132,12 +149,22 @@ const CleanerCard = ({ cleaner }) => {
           >
             View Profile
           </button>
-          <button 
-            onClick={handleBookNow}
-            className="btn-primary book-now-btn"
-          >
-            Book Now
-          </button>
+          {currentUser && currentUser.role === 'cleaner' ? (
+            <button 
+              className="btn-primary book-now-btn"
+              disabled
+              title="Cleaners cannot book other cleaners"
+            >
+              Unavailable
+            </button>
+          ) : (
+            <button 
+              onClick={handleBookNow}
+              className="btn-primary book-now-btn"
+            >
+              Book Now
+            </button>
+          )}
         </div>
       </div>
     </div>

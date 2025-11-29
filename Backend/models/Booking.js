@@ -159,9 +159,14 @@ bookingSchema.pre('validate', async function(next) {
     const bookingDate = new Date(this.schedule.date);
     const now = new Date();
     
+    // Set both dates to start of day for fair comparison
+    const bookingDateOnly = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate());
+    const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
     // Allow past dates only for completed or cancelled bookings
-    if (bookingDate < now && !['completed', 'cancelled'].includes(this.status)) {
-      return next(new Error('Booking date must be in the future for new bookings'));
+    // For new bookings, date must be today or in the future
+    if (bookingDateOnly < todayOnly && !['completed', 'cancelled'].includes(this.status)) {
+      return next(new Error('Booking date must be today or in the future for new bookings'));
     }
   }
 
