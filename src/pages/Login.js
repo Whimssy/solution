@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { APIError } from '../config/api';
 import './Login.css';
 
 const Login = () => {
@@ -53,7 +54,35 @@ const Login = () => {
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please try again.');
+      
+      // Handle different error types with user-friendly messages
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (err instanceof APIError) {
+        switch (err.errorType) {
+          case 'DATABASE_ERROR':
+            errorMessage = 'Database connection issue. Please ensure MongoDB is running and try again.';
+            break;
+          case 'NETWORK_ERROR':
+            errorMessage = 'Cannot connect to server. Please check if the backend server is running.';
+            break;
+          case 'AUTH_ERROR':
+            errorMessage = err.message || 'Invalid email or password. Please check your credentials.';
+            break;
+          case 'VALIDATION_ERROR':
+            errorMessage = err.message || 'Please check your input and try again.';
+            break;
+          case 'SERVER_ERROR':
+            errorMessage = 'Server error occurred. Please try again later.';
+            break;
+          default:
+            errorMessage = err.message || 'Login failed. Please try again.';
+        }
+      } else {
+        errorMessage = err.message || 'Login failed. Please try again.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -77,7 +106,17 @@ const Login = () => {
 
             {error && (
               <div className="alert alert-error">
-                {error}
+                <strong>⚠️ Error:</strong> {error}
+                {error.includes('Database') && (
+                  <div style={{ marginTop: '8px', fontSize: '0.9em', opacity: 0.9 }}>
+                    💡 Tip: Make sure MongoDB is running. Check the backend terminal for connection status.
+                  </div>
+                )}
+                {error.includes('Cannot connect to server') && (
+                  <div style={{ marginTop: '8px', fontSize: '0.9em', opacity: 0.9 }}>
+                    💡 Tip: Ensure the backend server is running on port 5000.
+                  </div>
+                )}
               </div>
             )}
 
@@ -96,6 +135,7 @@ const Login = () => {
                 value={formData.email}
                 onChange={handleInputChange}
                 placeholder="your.email@example.com"
+                autoComplete="email"
                 required
                 disabled={loading}
               />
@@ -110,14 +150,19 @@ const Login = () => {
                 value={formData.password}
                 onChange={handleInputChange}
                 placeholder="Enter your password"
+                autoComplete="current-password"
                 required
                 disabled={loading}
               />
             </div>
 
             <div className="form-options">
-              <label className="remember-me">
-                <input type="checkbox" />
+              <label className="remember-me" htmlFor="remember">
+                <input
+                  type="checkbox"
+                  id="remember"
+                  name="remember"
+                />
                 <span>Remember me</span>
               </label>
               <Link to="/forgot-password" className="forgot-password">

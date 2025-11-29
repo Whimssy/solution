@@ -72,7 +72,7 @@ exports.getCleaners = asyncHandler(async (req, res, next) => {
   // Calculate pagination
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
-  // Execute query with population
+  // Execute query with population and timeout
   const cleaners = await Cleaner.find(query)
     .populate({
       path: 'user',
@@ -82,9 +82,10 @@ exports.getCleaners = asyncHandler(async (req, res, next) => {
     .select('-documents') // Exclude sensitive documents
     .sort({ 'rating.average': -1, 'servicesCompleted': -1 }) // Sort by rating and experience
     .skip(skip)
-    .limit(parseInt(limit));
+    .limit(parseInt(limit))
+    .maxTimeMS(20000); // 20 second timeout for query
 
-  const total = await Cleaner.countDocuments(query);
+  const total = await Cleaner.countDocuments(query).maxTimeMS(10000); // 10 second timeout for count
   
   // Log for debugging
   console.log(`[getCleaners] Found ${cleaners.length} cleaners (total: ${total}), query:`, JSON.stringify(query));

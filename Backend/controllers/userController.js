@@ -66,7 +66,8 @@ exports.getUserBookings = asyncHandler(async (req, res, next) => {
         select: 'name email phone'
       }
     })
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .maxTimeMS(20000); // 20 second timeout for query
 
   res.status(200).json({
     success: true,

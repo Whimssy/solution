@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { APIError } from '../config/api';
 import './Register.css';
 
 const Register = () => {
@@ -139,7 +140,35 @@ const Register = () => {
       }
     } catch (err) {
       console.error('Registration error:', err);
-      setError(err.message || 'Registration failed. Please try again.');
+      
+      // Handle different error types with user-friendly messages
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (err instanceof APIError) {
+        switch (err.errorType) {
+          case 'DATABASE_ERROR':
+            errorMessage = 'Database connection issue. Please ensure MongoDB is running and try again.';
+            break;
+          case 'NETWORK_ERROR':
+            errorMessage = 'Cannot connect to server. Please check if the backend server is running.';
+            break;
+          case 'VALIDATION_ERROR':
+            errorMessage = err.message || 'Please check your input and try again.';
+            break;
+          case 'AUTH_ERROR':
+            errorMessage = err.message || 'Registration failed. This email may already be registered.';
+            break;
+          case 'SERVER_ERROR':
+            errorMessage = 'Server error occurred. Please try again later.';
+            break;
+          default:
+            errorMessage = err.message || 'Registration failed. Please try again.';
+        }
+      } else {
+        errorMessage = err.message || 'Registration failed. Please try again.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -162,7 +191,17 @@ const Register = () => {
 
           {error && (
             <div className="alert alert-error">
-              {error}
+              <strong>⚠️ Error:</strong> {error}
+              {error.includes('Database') && (
+                <div style={{ marginTop: '8px', fontSize: '0.9em', opacity: 0.9 }}>
+                  💡 Tip: Make sure MongoDB is running. Check the backend terminal for connection status.
+                </div>
+              )}
+              {error.includes('Cannot connect to server') && (
+                <div style={{ marginTop: '8px', fontSize: '0.9em', opacity: 0.9 }}>
+                  💡 Tip: Ensure the backend server is running on port 5000.
+                </div>
+              )}
             </div>
           )}
 
@@ -181,6 +220,7 @@ const Register = () => {
               value={formData.name}
               onChange={handleInputChange}
               placeholder="Enter your full name"
+              autoComplete="name"
               required
               disabled={loading}
             />
@@ -195,6 +235,7 @@ const Register = () => {
               value={formData.username}
               onChange={handleInputChange}
               placeholder="Choose a username (auto-generated if empty)"
+              autoComplete="username"
               disabled={loading}
             />
             <small>If left empty, username will be auto-generated from your name</small>
@@ -209,6 +250,7 @@ const Register = () => {
               value={formData.email}
               onChange={handleInputChange}
               placeholder="your.email@example.com"
+              autoComplete="email"
               required
               disabled={loading}
             />
@@ -223,6 +265,7 @@ const Register = () => {
               value={formData.phone}
               onChange={handlePhoneChange}
               placeholder="0712345678 or +254712345678"
+              autoComplete="tel"
               required
               disabled={loading}
               maxLength="13"
@@ -239,6 +282,7 @@ const Register = () => {
               value={formData.password}
               onChange={handleInputChange}
               placeholder="Minimum 6 characters"
+              autoComplete="new-password"
               required
               minLength="6"
               disabled={loading}
@@ -254,15 +298,18 @@ const Register = () => {
               value={formData.confirmPassword}
               onChange={handleInputChange}
               placeholder="Re-enter your password"
+              autoComplete="new-password"
               required
               disabled={loading}
             />
           </div>
 
           <div className="form-group checkbox-group">
-            <label className="checkbox-label">
+            <label className="checkbox-label" htmlFor="terms">
               <input
                 type="checkbox"
+                id="terms"
+                name="terms"
                 required
                 disabled={loading}
               />
