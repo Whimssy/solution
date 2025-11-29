@@ -4,14 +4,20 @@ import { useNavigate } from 'react-router-dom';
 import { bookingService } from '../services/bookingService';
 import './Dashboard.css';
 
-const Dashboard = () => {
+const ClientDashboard = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [recentBookings, setRecentBookings] = useState([]);
   const [upcomingBookings, setUpcomingBookings] = useState([]);
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [stats, setStats] = useState({
+    totalBookings: 0,
+    upcomingBookings: 0,
+    completedBookings: 0,
+    totalSpent: 0,
+    favoriteCleaners: 0
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [bookingFilter, setBookingFilter] = useState('all'); // all, pending, confirmed, in_progress
 
   // Safe user data access
   const safeUser = currentUser || { id: 'guest', name: 'Guest' };
@@ -72,6 +78,27 @@ const Dashboard = () => {
       setRecentBookings(recent);
       setUpcomingBookings(upcoming);
 
+      // Calculate stats
+      const completed = allBookings.filter(b => b.status === 'completed');
+      const totalSpent = completed.reduce((sum, b) => {
+        return sum + ((b.pricing?.totalAmount || b.total) || 0);
+      }, 0);
+
+      // Count unique cleaners
+      const uniqueCleaners = new Set(
+        allBookings
+          .map(b => b.cleaner?._id || b.cleanerId)
+          .filter(id => id)
+      );
+
+      setStats({
+        totalBookings: allBookings.length,
+        upcomingBookings: upcoming.length,
+        completedBookings: completed.length,
+        totalSpent,
+        favoriteCleaners: uniqueCleaners.size
+      });
+
     } catch (err) {
       console.error('Error loading dashboard data:', err);
       setError('Failed to load dashboard data. Please try refreshing the page.');
@@ -96,20 +123,62 @@ const Dashboard = () => {
     };
   }, [loadUserData]);
 
+  const handleFindCleaners = () => {
+    navigate('/');
+  };
+
+  const handleMyBookings = () => {
+    // Scroll to upcoming bookings section or show all bookings
+    const bookingsSection = document.querySelector('.recent-bookings-section');
+    if (bookingsSection) {
+      bookingsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      // If not authenticated, prompt sign up
+      checkAuthAndAction('view bookings');
+    }
+  };
+
+  const handleBookingHistory = () => {
+    // Scroll to recent bookings section
+    const historySection = document.querySelector('.recent-bookings-section');
+    if (historySection) {
+      historySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      // If not authenticated, prompt sign up
+      checkAuthAndAction('view booking history');
+    }
+  };
+
+  const handleReferAndEarn = () => {
+    if (currentUser) {
+      navigate('/referrals');
+    } else {
+      checkAuthAndAction('refer friends');
+    }
+  };
+
   const quickActions = [
     {
       icon: '🔍',
       title: 'Find Cleaners',
-      description: 'Book professional cleaning services',
-      action: () => navigate('/'),
+      description: 'Browse and book professional cleaning services',
+      action: handleFindCleaners,
       color: '#4CAF50',
       gradient: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)'
     },
     {
-      icon: '👥',
-      title: 'Become a Cleaner',
-      description: 'Start earning on our platform',
-      action: () => navigate('/become-cleaner'),
+      icon: '📅',
+      title: 'My Bookings',
+      description: 'View and manage all your cleaning appointments',
+      action: handleMyBookings,
+      color: '#2196F3',
+      gradient: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)'
+    },
+    {
+      icon: '📋',
+      title: 'Booking History',
+      description: 'See your past cleaning service history',
+      action: handleBookingHistory,
       color: '#FF9800',
       gradient: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)'
     },
@@ -117,7 +186,7 @@ const Dashboard = () => {
       icon: '📤',
       title: 'Refer & Earn',
       description: 'Share with friends and earn rewards',
-      action: () => navigate('/referrals'),
+      action: handleReferAndEarn,
       color: '#9C27B0',
       gradient: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)'
     }
@@ -128,6 +197,9 @@ const Dashboard = () => {
       case 'completed': return '#28a745';
       case 'confirmed': return '#17a2b8';
       case 'pending_payment': return '#ffc107';
+      case 'payment_pending': return '#ffc107';
+      case 'in_progress': return '#007bff';
+      case 'pending': return '#ffc107';
       case 'cancelled': return '#dc3545';
       default: return '#6c757d';
     }
@@ -162,7 +234,7 @@ const Dashboard = () => {
     return timeString;
   };
 
-  const checkAuthAndAction = (action, actionName = 'this action') => {
+  const checkAuthAndAction = (actionName = 'this action') => {
     if (!currentUser) {
       const shouldProceed = window.confirm(`You need to sign up to ${actionName}. Would you like to sign up now?`);
       if (shouldProceed) {
@@ -174,7 +246,7 @@ const Dashboard = () => {
   };
 
   const handleCancelBooking = async (bookingId) => {
-    if (!checkAuthAndAction(() => {}, 'cancel this booking')) return;
+    if (!checkAuthAndAction('cancel this booking')) return;
     
     if (!window.confirm('Are you sure you want to cancel this booking?')) {
       return;
@@ -182,16 +254,15 @@ const Dashboard = () => {
     
     try {
       await bookingService.cancelBooking(bookingId);
-      loadUserData(); // Reload bookings
+      loadUserData();
     } catch (error) {
       alert('Failed to cancel booking: ' + error.message);
     }
   };
 
   const handleBookAgain = (booking) => {
-    if (!checkAuthAndAction(() => {}, 'book again')) return;
+    if (!checkAuthAndAction('book again')) return;
     
-    // Navigate to cleaner profile or search with similar criteria
     if (booking.cleaner?.user?._id || booking.cleanerId) {
       const cleanerId = booking.cleaner?.user?._id || booking.cleanerId;
       navigate(`/cleaner/${cleanerId}`);
@@ -213,8 +284,18 @@ const Dashboard = () => {
     loadUserData();
   };
 
-  // Error boundary fallback
-  if (error) {
+  if (loading) {
+    return (
+      <div className="dashboard-wrapper">
+        <div className="dashboard-loading">
+          <div className="spinner"></div>
+          <p>Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !error.includes('load')) {
     return (
       <div className="dashboard-wrapper">
         <div className="error-state">
@@ -229,17 +310,6 @@ const Dashboard = () => {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="dashboard-wrapper">
-        <div className="dashboard-loading">
-          <div className="spinner"></div>
-          <p>Loading your dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="dashboard-wrapper">
       <div className="dashboard">
@@ -247,9 +317,13 @@ const Dashboard = () => {
           {/* Header Section */}
           <div className="dashboard-header">
             <div className="welcome-section">
-              <h1>Welcome to MADEASY {currentUser ? safeUser.name : ''}! 👋</h1>
-              <p>ITS CLEANING O'CLOCK SOMEWHERE</p>
-              <p>Request your cleaner by clicks</p>
+              <h1 className="welcome-title">
+                <span className="greeting-text">It's Cleaning O'Clock Somewhere!</span>
+                {currentUser && (
+                  <span className="user-name">Hello, {safeUser.name}! 👋</span>
+                )}
+              </h1>
+              <p className="welcome-tagline">Your trusted partner for spotless spaces, one click away</p>
             </div>
             <div className="header-actions">
               <button 
@@ -283,6 +357,80 @@ const Dashboard = () => {
                 >
                   Sign Up Now
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Stats Grid */}
+          {currentUser && (
+            <div className="quick-stats-section">
+              <div className="section-header">
+                <div>
+                  <h2>Overview</h2>
+                  <p>Your booking activity at a glance</p>
+                </div>
+              </div>
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div 
+                    className="stat-icon"
+                    style={{ background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)' }}
+                  >
+                    📅
+                  </div>
+                  <div className="stat-content">
+                    <div className="stat-number">{stats.totalBookings}</div>
+                    <div className="stat-label">Total Bookings</div>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div 
+                    className="stat-icon"
+                    style={{ background: 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)' }}
+                  >
+                    ⏳
+                  </div>
+                  <div className="stat-content">
+                    <div className="stat-number">{stats.upcomingBookings}</div>
+                    <div className="stat-label">Upcoming Bookings</div>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div 
+                    className="stat-icon"
+                    style={{ background: 'linear-gradient(135deg, #27ae60 0%, #229954 100%)' }}
+                  >
+                    ✅
+                  </div>
+                  <div className="stat-content">
+                    <div className="stat-number">{stats.completedBookings}</div>
+                    <div className="stat-label">Completed</div>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div 
+                    className="stat-icon"
+                    style={{ background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)' }}
+                  >
+                    💰
+                  </div>
+                  <div className="stat-content">
+                    <div className="stat-number">KSh {stats.totalSpent.toLocaleString()}</div>
+                    <div className="stat-label">Total Spent</div>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div 
+                    className="stat-icon"
+                    style={{ background: 'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)' }}
+                  >
+                    👥
+                  </div>
+                  <div className="stat-content">
+                    <div className="stat-number">{stats.favoriteCleaners}</div>
+                    <div className="stat-label">Cleaners Used</div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -397,7 +545,9 @@ const Dashboard = () => {
                               className="btn btn-warning"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/payment/${bookingId}`);
+                                if (checkAuthAndAction('complete payment')) {
+                                  navigate(`/payment/${bookingId}`);
+                                }
                               }}
                             >
                               Complete Payment
@@ -452,97 +602,87 @@ const Dashboard = () => {
 
             {recentBookings.length > 0 ? (
               <div className="bookings-grid">
-                {recentBookings.map(booking => (
-                  <div key={booking.id} className="booking-card">
-                    <div className="booking-header">
-                      <h4>{booking.serviceType || 'Cleaning Service'}</h4>
-                      <span 
-                        className="status-badge"
-                        style={{ backgroundColor: getStatusColor(booking.status) }}
-                      >
-                        {getStatusText(booking.status)}
-                      </span>
-                    </div>
-                    
-                    <div className="booking-details">
-                      <div className="detail-item">
-                        <span className="detail-label">Cleaner:</span>
-                        <span className="detail-value">
-                          {booking.cleaner?.user?.name || booking.cleanerName || 'Not assigned'}
-                        </span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Date & Time:</span>
-                        <span className="detail-value">
-                          {formatBookingDate(booking.schedule?.date || booking.date)} at {formatBookingTime(booking.schedule?.startTime || booking.time)}
-                        </span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Duration:</span>
-                        <span className="detail-value">{booking.schedule?.duration || booking.duration || 0} hours</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Address:</span>
-                        <span className="detail-value">
-                          {booking.address?.street 
-                            ? `${booking.address.street}, ${booking.address.city}` 
-                            : booking.address || 'Address not specified'}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="booking-footer">
-                      <div className="booking-amount">
-                        KSh {((booking.pricing?.totalAmount || booking.total) || 0).toLocaleString()}
-                      </div>
-                      <div className="booking-actions">
-                        {(booking.status === 'pending_payment' || booking.paymentStatus === 'pending') && (
-                          <button 
-                            className="btn btn-warning"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/payment/${booking._id || booking.id}`);
-                            }}
-                          >
-                            Complete Payment
-                          </button>
-                        )}
-                        <button 
-                          className="btn btn-outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/booking/${booking._id || booking.id}`);
-                          }}
+                {recentBookings.map(booking => {
+                  const bookingId = booking._id || booking.id;
+                  const status = booking.status || 'completed';
+                  const cleanerName = booking.cleaner?.user?.name || booking.cleanerName || 'Not assigned';
+                  const bookingDate = booking.schedule?.date || booking.date;
+                  const bookingTime = booking.schedule?.startTime || booking.time;
+                  const duration = booking.schedule?.duration || booking.duration || 0;
+                  const address = booking.address?.street 
+                    ? `${booking.address.street}, ${booking.address.city}` 
+                    : booking.address || 'Address not specified';
+                  const total = booking.pricing?.totalAmount || booking.total || 0;
+                  
+                  return (
+                    <div key={bookingId} className="booking-card">
+                      <div className="booking-header">
+                        <h4>{booking.serviceType || 'Cleaning Service'}</h4>
+                        <span 
+                          className="status-badge"
+                          style={{ backgroundColor: getStatusColor(status) }}
                         >
-                          View Details
-                        </button>
-                        {booking.status === 'completed' && (
+                          {getStatusText(status)}
+                        </span>
+                      </div>
+                      
+                      <div className="booking-details">
+                        <div className="detail-item">
+                          <span className="detail-label">Cleaner:</span>
+                          <span className="detail-value">{cleanerName}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Date & Time:</span>
+                          <span className="detail-value">
+                            {formatBookingDate(bookingDate)} at {formatBookingTime(bookingTime)}
+                          </span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Duration:</span>
+                          <span className="detail-value">{duration} hours</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Address:</span>
+                          <span className="detail-value">{address}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="booking-footer">
+                        <div className="booking-amount">
+                          KSh {total.toLocaleString()}
+                        </div>
+                        <div className="booking-actions">
                           <button 
-                            className="btn btn-primary"
+                            className="btn btn-outline"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleBookAgain(booking);
+                              navigate(`/booking/${bookingId}`);
                             }}
                           >
-                            Book Again
+                            View Details
                           </button>
-                        )}
+                          {status === 'completed' && (
+                            <button 
+                              className="btn btn-primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleBookAgain(booking);
+                              }}
+                            >
+                              Book Again
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="empty-state">
                 <div className="empty-icon">📋</div>
                 <h3>No Bookings Yet</h3>
                 <p>You haven't made any bookings yet. Start by finding a cleaner!</p>
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => navigate('/')}
-                >
-                  Find a Cleaner
-                </button>
               </div>
             )}
           </div>
@@ -552,4 +692,5 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default ClientDashboard;
+

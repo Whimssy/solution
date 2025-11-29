@@ -257,6 +257,14 @@ userSchema.virtual('hasPendingApplication').get(function() {
   return this.cleanerApplication.status === 'pending';
 });
 
+// Virtual populate for cleanerProfile (reverse of Cleaner.user reference)
+userSchema.virtual('cleanerProfile', {
+  ref: 'Cleaner',
+  localField: '_id',
+  foreignField: 'user',
+  justOne: true
+});
+
 // Indexes for faster queries
 userSchema.index({ email: 1 }); // Already unique, but ensure index exists
 // Note: phone field already has unique: true in schema definition (line 31), which automatically creates unique index

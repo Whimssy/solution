@@ -4,7 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/Routes/ProtectedRoute';
 import AdminRoute from './components/auth/Routes/AdminRoute';
 import Login from './pages/Login';
-import CleanerSearch from './pages/CleanerSearch';
+import Register from './pages/Register';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminLogin from './pages/AdminLogin';
 import BookingPage from './pages/BookingPage';
@@ -12,6 +12,9 @@ import PaymentPage from './pages/PaymentPage';
 import ReferralPage from './pages/ReferralPage';
 import CleanerRegistration from './components/auth/CleanerRegistration/CleanerRegistration';
 import Dashboard from './pages/Dashboard';
+import ClientDashboard from './pages/ClientDashboard';
+import CleanerDashboard from './pages/CleanerDashboard';
+import Home from './pages/Home';
 import CleanerProfile from './pages/CleanerProfile';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
@@ -32,22 +35,30 @@ function App() {
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               <Route path="/admin/login" element={<AdminLogin />} />
+              
+              {/* Public Routes */}
+              <Route path="/" element={<Home />} />
               
               {/* Protected Client Routes */}
               <Route 
-                path="/" 
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
+                path="/dashboard" 
+                element={<Dashboard />}
+              />
+              <Route 
+                path="/client/dashboard" 
+                element={<ClientDashboard />}
+              />
+              <Route 
+                path="/cleaner/dashboard" 
+                element={<CleanerDashboard />}
               />
               <Route 
                 path="/search" 
                 element={
                   <ProtectedRoute>
-                    <CleanerSearch />
+                    <Navigate to="/" replace />
                   </ProtectedRoute>
                 } 
               />
@@ -128,6 +139,9 @@ function NavigateToAppropriateDashboard() {
       const user = JSON.parse(userStr);
       if (user.role === 'admin' || user.role === 'super_admin') {
         return <Navigate to="/admin/dashboard" replace />;
+      }
+      if (user.role === 'cleaner') {
+        return <Navigate to="/cleaner/dashboard" replace />;
       }
     } catch (error) {
       console.error('Error parsing user data:', error);

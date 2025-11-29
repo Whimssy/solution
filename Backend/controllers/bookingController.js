@@ -1,14 +1,19 @@
 const Booking = require('../models/Booking');
-const User = require('../models/User');
 const Cleaner = require('../models/Cleaner');
 const asyncHandler = require('../middleware/asyncHandler');
-const logger = require('../utils/logger');
-const { logEvent, logError } = require('../middleware/logger');
 
 // @desc    Create booking
 // @route   POST /api/bookings
 // @access  Private/User
 exports.createBooking = asyncHandler(async (req, res, next) => {
+  // Explicit check: cleaners cannot book other cleaners
+  if (req.user.role === 'cleaner') {
+    return res.status(403).json({
+      success: false,
+      message: 'Cleaners cannot book other cleaners. Please use a regular user account to make bookings.'
+    });
+  }
+
   const {
     cleaner,
     serviceType,
@@ -22,12 +27,14 @@ exports.createBooking = asyncHandler(async (req, res, next) => {
   if (!cleaner || !serviceType || !schedule || !address || !pricing) {
     return res.status(400).json({
       success: false,
-      message: 'Please provide cleaner, serviceType, schedule, address, and pricing'
+      message: 'Please provide all required booking information'
     });
   }
 
-  // Verify cleaner exists and is verified
-  const cleanerDoc = await Cleaner.findById(cleaner);
+  // Verify cleaner exists and is available
+  const cleanerDoc = await Cleaner.findById(cleaner)
+    .populate('user', 'name email phone');
+
   if (!cleanerDoc) {
     return res.status(404).json({
       success: false,
@@ -38,7 +45,14 @@ exports.createBooking = asyncHandler(async (req, res, next) => {
   if (!cleanerDoc.isVerified) {
     return res.status(400).json({
       success: false,
-      message: 'Cleaner is not verified'
+      message: 'Cannot book with an unverified cleaner'
+    });
+  }
+
+  if (!cleanerDoc.isAvailable) {
+    return res.status(400).json({
+      success: false,
+      message: 'Cleaner is currently unavailable'
     });
   }
 
@@ -55,8 +69,7 @@ exports.createBooking = asyncHandler(async (req, res, next) => {
     paymentStatus: 'pending'
   });
 
-  // Populate booking data
-  await booking.populate('user', 'name email phone');
+  // Populate for response
   await booking.populate({
     path: 'cleaner',
     populate: {
@@ -64,42 +77,7 @@ exports.createBooking = asyncHandler(async (req, res, next) => {
       select: 'name email phone'
     }
   });
-
-  // Notify cleaner about new booking
-  try {
-    const cleanerUser = await User.findById(cleanerDoc.user);
-    if (cleanerUser) {
-      logger.info('📧 Notification: New booking created', {
-        cleanerId: cleanerUser._id,
-        cleanerName: cleanerUser.name,
-        cleanerEmail: cleanerUser.email,
-        bookingId: booking._id,
-        serviceType: serviceType,
-        date: schedule.date,
-        startTime: schedule.startTime
-      });
-
-      // Log to database
-      logEvent('info', 'New booking notification sent', {
-        cleanerId: cleanerUser._id,
-        bookingId: booking._id,
-        serviceType: serviceType
-      });
-      
-      // TODO: Implement actual notification system (SMS/Email/Push)
-      // For now, we'll just log it. In production, you would:
-      // - Send SMS via Twilio or similar
-      // - Send Email via SendGrid or similar
-      // - Create notification record in database
-      // - Send push notification if cleaner has app
-    }
-  } catch (notificationError) {
-    logError(notificationError, {
-      bookingId: booking._id,
-      context: 'cleaner_notification'
-    });
-    // Don't fail the booking creation if notification fails
-  }
+  await booking.populate('user', 'name email phone');
 
   res.status(201).json({
     success: true,
@@ -120,7 +98,6 @@ exports.getUserBookings = asyncHandler(async (req, res, next) => {
   }
 
   const bookings = await Booking.find(query)
-    .populate('cleaner', 'user')
     .populate({
       path: 'cleaner',
       populate: {
@@ -128,7 +105,7 @@ exports.getUserBookings = asyncHandler(async (req, res, next) => {
         select: 'name email phone'
       }
     })
-    .sort({ createdAt: -1 });
+    .sort({ 'schedule.date': -1, createdAt: -1 });
 
   res.status(200).json({
     success: true,
@@ -141,7 +118,7 @@ exports.getUserBookings = asyncHandler(async (req, res, next) => {
 // @route   GET /api/bookings/cleaner
 // @access  Private/Cleaner
 exports.getCleanerBookings = asyncHandler(async (req, res, next) => {
-  // Find cleaner profile for this user
+  // Find cleaner profile for the authenticated user
   const cleaner = await Cleaner.findOne({ user: req.user.id });
   
   if (!cleaner) {
@@ -152,15 +129,18 @@ exports.getCleanerBookings = asyncHandler(async (req, res, next) => {
   }
 
   const { status } = req.query;
-  
   const query = { cleaner: cleaner._id };
+  
   if (status) {
     query.status = status;
   }
 
   const bookings = await Booking.find(query)
-    .populate('user', 'name email phone')
-    .sort({ createdAt: -1 });
+    .populate({
+      path: 'user',
+      select: 'name email phone'
+    })
+    .sort({ 'schedule.date': 1, 'schedule.startTime': 1 });
 
   res.status(200).json({
     success: true,
@@ -169,19 +149,19 @@ exports.getCleanerBookings = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Get single booking
+// @desc    Get booking by ID
 // @route   GET /api/bookings/:id
 // @access  Private
 exports.getBookingById = asyncHandler(async (req, res, next) => {
   const booking = await Booking.findById(req.params.id)
-    .populate('user', 'name email phone')
     .populate({
       path: 'cleaner',
       populate: {
         path: 'user',
-        select: 'name email phone'
+        select: 'name email phone address'
       }
-    });
+    })
+    .populate('user', 'name email phone address');
 
   if (!booking) {
     return res.status(404).json({
@@ -190,12 +170,21 @@ exports.getBookingById = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Check if user has access to this booking
-  const isUser = req.user.role === 'user' && booking.user._id.toString() === req.user.id;
-  const isCleaner = req.user.role === 'cleaner' && booking.cleaner.user._id.toString() === req.user.id;
+  // Check authorization - user can only access their own bookings
+  // Cleaner can only access their assigned bookings
+  // Admin can access all
+  const isUser = booking.user._id.toString() === req.user.id.toString();
   const isAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
+  
+  let isCleaner = false;
+  if (req.user.role === 'cleaner') {
+    const cleaner = await Cleaner.findOne({ user: req.user.id });
+    if (cleaner && booking.cleaner._id.toString() === cleaner._id.toString()) {
+      isCleaner = true;
+    }
+  }
 
-  if (!isUser && !isCleaner && !isAdmin) {
+  if (!isUser && !isAdmin && !isCleaner) {
     return res.status(403).json({
       success: false,
       message: 'Not authorized to access this booking'
@@ -213,12 +202,19 @@ exports.getBookingById = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.updateBookingStatus = asyncHandler(async (req, res, next) => {
   const { status } = req.body;
-  const validStatuses = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'payment_pending'];
 
-  if (!status || !validStatuses.includes(status)) {
+  if (!status) {
     return res.status(400).json({
       success: false,
-      message: 'Please provide a valid status'
+      message: 'Please provide a status'
+    });
+  }
+
+  const validStatuses = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'payment_pending'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
     });
   }
 
@@ -231,20 +227,19 @@ exports.updateBookingStatus = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Check authorization
-  const isUser = req.user.role === 'user' && booking.user.toString() === req.user.id;
-  const isCleaner = req.user.role === 'cleaner';
+  // Authorization check
+  const isUser = booking.user.toString() === req.user.id.toString();
   const isAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
-
+  
+  let isCleaner = false;
   if (req.user.role === 'cleaner') {
     const cleaner = await Cleaner.findOne({ user: req.user.id });
-    if (!cleaner || booking.cleaner.toString() !== cleaner._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to update this booking'
-      });
+    if (cleaner && booking.cleaner.toString() === cleaner._id.toString()) {
+      isCleaner = true;
     }
-  } else if (!isUser && !isAdmin) {
+  }
+
+  if (!isUser && !isAdmin && !isCleaner) {
     return res.status(403).json({
       success: false,
       message: 'Not authorized to update this booking'
@@ -255,7 +250,6 @@ exports.updateBookingStatus = asyncHandler(async (req, res, next) => {
   booking.status = status;
   await booking.save();
 
-  await booking.populate('user', 'name email phone');
   await booking.populate({
     path: 'cleaner',
     populate: {
@@ -263,6 +257,7 @@ exports.updateBookingStatus = asyncHandler(async (req, res, next) => {
       select: 'name email phone'
     }
   });
+  await booking.populate('user', 'name email phone');
 
   res.status(200).json({
     success: true,
@@ -273,7 +268,7 @@ exports.updateBookingStatus = asyncHandler(async (req, res, next) => {
 
 // @desc    Cancel booking
 // @route   PUT /api/bookings/:id/cancel
-// @access  Private
+// @access  Private/User or Admin
 exports.cancelBooking = asyncHandler(async (req, res, next) => {
   const { cancellationReason } = req.body;
 
@@ -286,8 +281,8 @@ exports.cancelBooking = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Check authorization
-  const isUser = req.user.role === 'user' && booking.user.toString() === req.user.id;
+  // Only user who made the booking or admin can cancel
+  const isUser = booking.user.toString() === req.user.id.toString();
   const isAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
 
   if (!isUser && !isAdmin) {
@@ -297,7 +292,7 @@ exports.cancelBooking = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Check if booking can be cancelled
+  // Cannot cancel completed bookings
   if (booking.status === 'completed') {
     return res.status(400).json({
       success: false,
@@ -305,14 +300,13 @@ exports.cancelBooking = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Cancel booking
+  // Update booking
   booking.status = 'cancelled';
   if (cancellationReason) {
     booking.cancellationReason = cancellationReason;
   }
   await booking.save();
 
-  await booking.populate('user', 'name email phone');
   await booking.populate({
     path: 'cleaner',
     populate: {
@@ -320,6 +314,7 @@ exports.cancelBooking = asyncHandler(async (req, res, next) => {
       select: 'name email phone'
     }
   });
+  await booking.populate('user', 'name email phone');
 
   res.status(200).json({
     success: true,
@@ -327,5 +322,4 @@ exports.cancelBooking = asyncHandler(async (req, res, next) => {
     data: booking
   });
 });
-
 

@@ -1,70 +1,93 @@
 const Cleaner = require('../models/Cleaner');
-const User = require('../models/User');
-const Booking = require('../models/Booking');
 const asyncHandler = require('../middleware/asyncHandler');
-const mongoose = require('mongoose');
 
-// @desc    Get all cleaners (search/list)
+// @desc    List/search cleaners
 // @route   GET /api/cleaners
 // @access  Public
 exports.getCleaners = asyncHandler(async (req, res, next) => {
-  const { 
-    city, 
-    state, 
-    serviceType, 
-    minRating, 
+  const {
+    city,
+    state,
+    serviceType,
+    minRating,
     maxPrice,
     isAvailable,
     page = 1,
-    limit = 10
+    limit = 100
   } = req.query;
 
-  // Build query
-  const query = { isVerified: true };
+  // Build base query - show verified cleaners (or all for development)
+  // In production, you might want to only show verified cleaners
+  const query = {};
+  
+  // Uncomment to only show verified cleaners:
+  // query.isVerified = true;
 
+  // Filter by availability
   if (isAvailable !== undefined) {
     query.isAvailable = isAvailable === 'true';
   }
 
+  // Filter by service type (specialties)
+  if (serviceType) {
+    query.specialties = { $in: [serviceType] };
+  }
+
+  // Filter by minimum rating
   if (minRating) {
     query['rating.average'] = { $gte: parseFloat(minRating) };
   }
 
+  // Filter by maximum price
   if (maxPrice) {
     query.hourlyRate = { $lte: parseFloat(maxPrice) };
   }
 
-  if (serviceType) {
-    query.specialties = { $in: [serviceType] };
+  // Filter by city/state using aggregation or find users first
+  let userFilter = {};
+  if (city || state) {
+    const User = require('../models/User');
+    const addressQuery = {};
+    if (city) addressQuery['address.city'] = new RegExp(city, 'i');
+    if (state) addressQuery['address.state'] = new RegExp(state, 'i');
+    
+    const usersInLocation = await User.find(addressQuery).select('_id');
+    const userIds = usersInLocation.map(u => u._id);
+    
+    if (userIds.length > 0) {
+      query.user = { $in: userIds };
+    } else {
+      // No users found in that location, return empty result
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        total: 0,
+        page: parseInt(page),
+        pages: 0,
+        data: []
+      });
+    }
   }
 
   // Calculate pagination
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
-  // Get cleaners
-  let cleaners = await Cleaner.find(query)
-    .populate('user', 'name email phone profilePhoto')
-    .sort({ 'rating.average': -1, 'rating.count': -1 })
+  // Execute query with population
+  const cleaners = await Cleaner.find(query)
+    .populate({
+      path: 'user',
+      select: 'name email phone profilePhoto address',
+      options: { strictPopulate: false } // Don't fail if user doesn't exist
+    })
+    .select('-documents') // Exclude sensitive documents
+    .sort({ 'rating.average': -1, 'servicesCompleted': -1 }) // Sort by rating and experience
     .skip(skip)
     .limit(parseInt(limit));
 
-  // Filter by location if provided (simple city/state match)
-  if (city || state) {
-    cleaners = cleaners.filter(cleaner => {
-      const user = cleaner.user;
-      if (!user || !user.address) return false;
-      if (city && user.address.city && user.address.city.toLowerCase() !== city.toLowerCase()) {
-        return false;
-      }
-      if (state && user.address.state && user.address.state.toLowerCase() !== state.toLowerCase()) {
-        return false;
-      }
-      return true;
-    });
-  }
-
-  // Get total count
   const total = await Cleaner.countDocuments(query);
+  
+  // Log for debugging
+  console.log(`[getCleaners] Found ${cleaners.length} cleaners (total: ${total}), query:`, JSON.stringify(query));
 
   res.status(200).json({
     success: true,
@@ -81,19 +104,16 @@ exports.getCleaners = asyncHandler(async (req, res, next) => {
 // @access  Public
 exports.getCleanerById = asyncHandler(async (req, res, next) => {
   const cleaner = await Cleaner.findById(req.params.id)
-    .populate('user', 'name email phone profilePhoto address');
+    .populate({
+      path: 'user',
+      select: 'name email phone profilePhoto address'
+    })
+    .select('-documents'); // Exclude sensitive documents
 
   if (!cleaner) {
     return res.status(404).json({
       success: false,
       message: 'Cleaner not found'
-    });
-  }
-
-  if (!cleaner.isVerified) {
-    return res.status(403).json({
-      success: false,
-      message: 'Cleaner profile is not verified'
     });
   }
 
@@ -107,7 +127,7 @@ exports.getCleanerById = asyncHandler(async (req, res, next) => {
 // @route   GET /api/cleaners/me/bookings
 // @access  Private/Cleaner
 exports.getCleanerBookings = asyncHandler(async (req, res, next) => {
-  // Find cleaner profile for this user
+  // Find cleaner profile for the authenticated user
   const cleaner = await Cleaner.findOne({ user: req.user.id });
   
   if (!cleaner) {
@@ -118,15 +138,19 @@ exports.getCleanerBookings = asyncHandler(async (req, res, next) => {
   }
 
   const { status } = req.query;
-  
   const query = { cleaner: cleaner._id };
+  
   if (status) {
     query.status = status;
   }
 
+  const Booking = require('../models/Booking');
   const bookings = await Booking.find(query)
-    .populate('user', 'name email phone')
-    .sort({ createdAt: -1 });
+    .populate({
+      path: 'user',
+      select: 'name email phone'
+    })
+    .sort({ 'schedule.date': 1, 'schedule.startTime': 1 });
 
   res.status(200).json({
     success: true,
@@ -139,6 +163,24 @@ exports.getCleanerBookings = asyncHandler(async (req, res, next) => {
 // @route   POST /api/cleaners/apply
 // @access  Private/User
 exports.applyAsCleaner = asyncHandler(async (req, res, next) => {
+  const User = require('../models/User');
+  const user = await User.findById(req.user.id);
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found'
+    });
+  }
+
+  // Check if user can apply
+  if (!user.canApplyAsCleaner()) {
+    return res.status(400).json({
+      success: false,
+      message: `Cannot apply. Current application status: ${user.cleanerApplication.status}`
+    });
+  }
+
   const {
     bio,
     experience,
@@ -149,144 +191,18 @@ exports.applyAsCleaner = asyncHandler(async (req, res, next) => {
     documents
   } = req.body;
 
-  // Check if user can apply
-  const user = await User.findById(req.user.id);
-  
-  if (!user.canApplyAsCleaner()) {
-    return res.status(400).json({
-      success: false,
-      message: `Cannot apply. Current application status: ${user.cleanerApplication.status}`
-    });
-  }
-
-  // Validate required fields
-  if (!bio || !hourlyRate) {
-    return res.status(400).json({
-      success: false,
-      message: 'Please provide bio and hourlyRate'
-    });
-  }
-
-  // Update user's cleaner application
-  user.cleanerApplication = {
-    ...user.cleanerApplication,
+  // Submit application using user method
+  await user.applyAsCleaner({
     bio,
-    experience: experience || 0,
-    specialties: specialties || [],
+    experience,
+    specialties,
     hourlyRate,
-    availability: availability || user.cleanerApplication.availability,
-    workingHours: workingHours || user.cleanerApplication.workingHours,
-    documents: documents || {},
-    status: 'pending',
-    appliedAt: new Date()
-  };
+    availability,
+    workingHours,
+    documents
+  });
 
-  // Try to use transaction for atomicity (requires replica set)
-  // Fall back to individual operations if transactions aren't supported
-  let cleaner;
-  const session = await mongoose.startSession();
-  
-  try {
-    await session.withTransaction(async () => {
-      // Save user document within transaction
-      await user.save({ session });
-      console.log(`✅ User document saved successfully for user: ${user._id} (transaction)`);
-
-      // Create or update cleaner profile within transaction
-      cleaner = await Cleaner.findOneAndUpdate(
-        { user: user._id },
-        {
-          user: user._id,
-          bio,
-          experience: experience || 0,
-          specialties: specialties || [],
-          hourlyRate,
-          availability: availability || {},
-          workingHours: workingHours || {},
-          documents: documents || {},
-          isVerified: false
-        },
-        { upsert: true, new: true, session }
-      );
-      console.log(`✅ Cleaner document saved successfully for user: ${user._id}, cleaner ID: ${cleaner._id} (transaction)`);
-    });
-    
-    console.log('✅ Transaction completed successfully');
-  } catch (transactionError) {
-    // If transaction fails (e.g., no replica set), fall back to individual operations
-    if (transactionError.message && transactionError.message.includes('replica set')) {
-      console.warn('⚠️  Transactions not supported (no replica set), falling back to individual operations');
-      
-      // Save user document with detailed error logging
-      try {
-        await user.save();
-        console.log(`✅ User document saved successfully for user: ${user._id}`);
-      } catch (error) {
-        console.error('❌ Error saving user document:', {
-          userId: user._id,
-          error: error.message,
-          stack: error.stack
-        });
-        throw error;
-      }
-
-      // Create or update cleaner profile (will be verified when admin approves)
-      try {
-        cleaner = await Cleaner.findOneAndUpdate(
-          { user: user._id },
-          {
-            user: user._id,
-            bio,
-            experience: experience || 0,
-            specialties: specialties || [],
-            hourlyRate,
-            availability: availability || {},
-            workingHours: workingHours || {},
-            documents: documents || {},
-            isVerified: false
-          },
-          { upsert: true, new: true }
-        );
-        console.log(`✅ Cleaner document saved successfully for user: ${user._id}, cleaner ID: ${cleaner._id}`);
-      } catch (error) {
-        console.error('❌ Error saving cleaner document:', {
-          userId: user._id,
-          error: error.message,
-          stack: error.stack
-        });
-        // If cleaner save fails, we should ideally rollback user changes
-        // For now, we'll throw the error to prevent inconsistent state
-        throw new Error(`Failed to create cleaner profile: ${error.message}`);
-      }
-    } else {
-      // Transaction error that's not about replica set
-      console.error('❌ Transaction error:', {
-        userId: user._id,
-        error: transactionError.message,
-        stack: transactionError.stack
-      });
-      throw transactionError;
-    }
-  } finally {
-    await session.endSession();
-  }
-
-  // Verification step: Confirm Cleaner document was created
-  const verificationCleaner = await Cleaner.findById(cleaner._id);
-  if (!verificationCleaner) {
-    console.error('❌ Verification failed: Cleaner document not found after creation', {
-      cleanerId: cleaner._id,
-      userId: user._id
-    });
-    return res.status(500).json({
-      success: false,
-      message: 'Cleaner application submitted but verification failed. Please contact support.'
-    });
-  }
-
-  console.log(`✅ Verification passed: Cleaner document confirmed in database for user: ${user._id}`);
-
-  res.status(201).json({
+  res.status(200).json({
     success: true,
     message: 'Cleaner application submitted successfully',
     data: {
@@ -300,9 +216,8 @@ exports.applyAsCleaner = asyncHandler(async (req, res, next) => {
 // @route   PUT /api/cleaners/me
 // @access  Private/Cleaner
 exports.updateCleanerProfile = asyncHandler(async (req, res, next) => {
-  // Find cleaner profile for this user
   const cleaner = await Cleaner.findOne({ user: req.user.id });
-  
+
   if (!cleaner) {
     return res.status(404).json({
       success: false,
@@ -310,36 +225,38 @@ exports.updateCleanerProfile = asyncHandler(async (req, res, next) => {
     });
   }
 
-  const {
-    bio,
-    experience,
-    specialties,
-    hourlyRate,
-    availability,
-    workingHours,
-    photos,
-    isAvailable
-  } = req.body;
+  const fieldsToUpdate = {
+    bio: req.body.bio,
+    experience: req.body.experience,
+    specialties: req.body.specialties,
+    hourlyRate: req.body.hourlyRate,
+    availability: req.body.availability,
+    workingHours: req.body.workingHours,
+    photos: req.body.photos,
+    isAvailable: req.body.isAvailable
+  };
 
-  // Update fields
-  if (bio !== undefined) cleaner.bio = bio;
-  if (experience !== undefined) cleaner.experience = experience;
-  if (specialties !== undefined) cleaner.specialties = specialties;
-  if (hourlyRate !== undefined) cleaner.hourlyRate = hourlyRate;
-  if (availability !== undefined) cleaner.availability = availability;
-  if (workingHours !== undefined) cleaner.workingHours = workingHours;
-  if (photos !== undefined) cleaner.photos = photos;
-  if (isAvailable !== undefined) cleaner.isAvailable = isAvailable;
+  // Remove undefined fields
+  Object.keys(fieldsToUpdate).forEach(key => 
+    fieldsToUpdate[key] === undefined && delete fieldsToUpdate[key]
+  );
 
-  await cleaner.save();
-
-  await cleaner.populate('user', 'name email phone profilePhoto');
+  const updatedCleaner = await Cleaner.findByIdAndUpdate(
+    cleaner._id,
+    fieldsToUpdate,
+    {
+      new: true,
+      runValidators: true
+    }
+  ).populate({
+    path: 'user',
+    select: 'name email phone profilePhoto address'
+  });
 
   res.status(200).json({
     success: true,
     message: 'Cleaner profile updated successfully',
-    data: cleaner
+    data: updatedCleaner
   });
 });
-
 

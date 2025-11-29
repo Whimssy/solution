@@ -1,9 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 import './CleanerCard.css';
 
 const CleanerCard = ({ cleaner }) => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
 
   const handleViewProfile = () => {
     navigate(`/cleaner/${cleaner.id}`);
@@ -11,6 +13,21 @@ const CleanerCard = ({ cleaner }) => {
 
   const handleBookNow = (e) => {
     e.stopPropagation(); // Prevent triggering the card click
+    
+    // Check if user is authenticated
+    if (!currentUser) {
+      // Redirect to login with return URL
+      const returnUrl = encodeURIComponent(`/book/${cleaner.id}`);
+      navigate(`/login?returnUrl=${returnUrl}`);
+      return;
+    }
+    
+    // Check if user is a cleaner (cleaners cannot book other cleaners)
+    if (currentUser.role === 'cleaner') {
+      alert('Cleaners cannot book other cleaners. Please use a regular user account to make bookings.');
+      return;
+    }
+    
     navigate(`/book/${cleaner.id}`, {
       state: {
         serviceType: cleaner.services[0],
@@ -21,6 +38,29 @@ const CleanerCard = ({ cleaner }) => {
 
   const handleCardClick = () => {
     navigate(`/cleaner/${cleaner.id}`);
+  };
+
+  // Format availability schedule
+  const formatAvailabilitySchedule = (schedule) => {
+    if (!schedule || typeof schedule !== 'object') return null;
+    
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const availableDays = days
+      .map((day, index) => schedule[day] ? dayLabels[index] : null)
+      .filter(day => day !== null);
+    
+    return availableDays.length > 0 ? availableDays.join(', ') : 'Not available';
+  };
+
+  // Format working hours
+  const formatWorkingHours = (workingHours) => {
+    if (!workingHours || typeof workingHours !== 'object') {
+      return '08:00 - 17:00';
+    }
+    const start = workingHours.start || '08:00';
+    const end = workingHours.end || '17:00';
+    return `${start} - ${end}`;
   };
 
   // Default cleaner data structure
@@ -36,7 +76,9 @@ const CleanerCard = ({ cleaner }) => {
     experience: cleaner.experience || '2+ years',
     image: cleaner.image || '👩‍💼',
     verified: cleaner.verified || true,
-    completedJobs: cleaner.completedJobs || 89
+    completedJobs: cleaner.completedJobs || 89,
+    availabilitySchedule: cleaner.availabilitySchedule || {},
+    workingHours: cleaner.workingHours || { start: '08:00', end: '17:00' }
   };
 
   return (
@@ -82,6 +124,18 @@ const CleanerCard = ({ cleaner }) => {
         </div>
       </div>
 
+      <div className="cleaner-availability">
+        <div className="availability-label">Availability:</div>
+        <div className="availability-info">
+          <div className="availability-days">
+            📅 {formatAvailabilitySchedule(cleanerData.availabilitySchedule)}
+          </div>
+          <div className="availability-hours">
+            🕐 {formatWorkingHours(cleanerData.workingHours)}
+          </div>
+        </div>
+      </div>
+
       <div className="cleaner-footer">
         <div className="price-section">
           <span className="price">KES {cleanerData.hourlyRate}/hour</span>
@@ -95,12 +149,22 @@ const CleanerCard = ({ cleaner }) => {
           >
             View Profile
           </button>
-          <button 
-            onClick={handleBookNow}
-            className="btn-primary book-now-btn"
-          >
-            Book Now
-          </button>
+          {currentUser && currentUser.role === 'cleaner' ? (
+            <button 
+              className="btn-primary book-now-btn"
+              disabled
+              title="Cleaners cannot book other cleaners"
+            >
+              Unavailable
+            </button>
+          ) : (
+            <button 
+              onClick={handleBookNow}
+              className="btn-primary book-now-btn"
+            >
+              Book Now
+            </button>
+          )}
         </div>
       </div>
     </div>
