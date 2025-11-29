@@ -105,7 +105,8 @@ exports.getUserBookings = asyncHandler(async (req, res, next) => {
         select: 'name email phone'
       }
     })
-    .sort({ 'schedule.date': -1, createdAt: -1 });
+    .sort({ 'schedule.date': -1, createdAt: -1 })
+    .maxTimeMS(20000); // 20 second timeout for query
 
   res.status(200).json({
     success: true,
@@ -140,7 +141,8 @@ exports.getCleanerBookings = asyncHandler(async (req, res, next) => {
       path: 'user',
       select: 'name email phone'
     })
-    .sort({ 'schedule.date': 1, 'schedule.startTime': 1 });
+    .sort({ 'schedule.date': 1, 'schedule.startTime': 1 })
+    .maxTimeMS(20000); // 20 second timeout for query
 
   res.status(200).json({
     success: true,
