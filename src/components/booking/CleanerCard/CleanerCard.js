@@ -23,6 +23,29 @@ const CleanerCard = ({ cleaner }) => {
     navigate(`/cleaner/${cleaner.id}`);
   };
 
+  // Format availability schedule
+  const formatAvailabilitySchedule = (schedule) => {
+    if (!schedule || typeof schedule !== 'object') return null;
+    
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const availableDays = days
+      .map((day, index) => schedule[day] ? dayLabels[index] : null)
+      .filter(day => day !== null);
+    
+    return availableDays.length > 0 ? availableDays.join(', ') : 'Not available';
+  };
+
+  // Format working hours
+  const formatWorkingHours = (workingHours) => {
+    if (!workingHours || typeof workingHours !== 'object') {
+      return '08:00 - 17:00';
+    }
+    const start = workingHours.start || '08:00';
+    const end = workingHours.end || '17:00';
+    return `${start} - ${end}`;
+  };
+
   // Default cleaner data structure
   const cleanerData = {
     id: cleaner.id || Math.random().toString(36).substr(2, 9),
@@ -36,7 +59,9 @@ const CleanerCard = ({ cleaner }) => {
     experience: cleaner.experience || '2+ years',
     image: cleaner.image || '👩‍💼',
     verified: cleaner.verified || true,
-    completedJobs: cleaner.completedJobs || 89
+    completedJobs: cleaner.completedJobs || 89,
+    availabilitySchedule: cleaner.availabilitySchedule || {},
+    workingHours: cleaner.workingHours || { start: '08:00', end: '17:00' }
   };
 
   return (
@@ -79,6 +104,18 @@ const CleanerCard = ({ cleaner }) => {
           {cleanerData.services.length > 3 && (
             <span className="service-tag more">+{cleanerData.services.length - 3} more</span>
           )}
+        </div>
+      </div>
+
+      <div className="cleaner-availability">
+        <div className="availability-label">Availability:</div>
+        <div className="availability-info">
+          <div className="availability-days">
+            📅 {formatAvailabilitySchedule(cleanerData.availabilitySchedule)}
+          </div>
+          <div className="availability-hours">
+            🕐 {formatWorkingHours(cleanerData.workingHours)}
+          </div>
         </div>
       </div>
 

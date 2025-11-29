@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { authService } from '../services/authService';
 
 const AuthContext = createContext();
 
@@ -15,12 +16,68 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Load user from localStorage on mount
     const savedUser = localStorage.getItem('madeasy_user');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
+    const token = localStorage.getItem('token');
+    
+    if (savedUser && token) {
+      try {
+        const user = JSON.parse(savedUser);
+        setCurrentUser(user);
+      } catch (error) {
+        console.error('Error parsing saved user:', error);
+        localStorage.removeItem('madeasy_user');
+        localStorage.removeItem('token');
+      }
     }
     setLoading(false);
   }, []);
+
+  const login = async (email, password) => {
+    setLoading(true);
+    try {
+      const response = await authService.login({ email, password });
+      
+      if (response.success) {
+        setCurrentUser(response.user);
+        localStorage.setItem('madeasy_user', JSON.stringify(response.user));
+        if (response.token) {
+          localStorage.setItem('token', response.token);
+        }
+        return { success: true, user: response.user };
+      } else {
+        return { success: false, error: response.message || 'Login failed' };
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, error: error.message || 'Login failed' };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (userData) => {
+    setLoading(true);
+    try {
+      const response = await authService.register(userData);
+      
+      if (response.success) {
+        setCurrentUser(response.user);
+        localStorage.setItem('madeasy_user', JSON.stringify(response.user));
+        if (response.token) {
+          localStorage.setItem('token', response.token);
+        }
+        return { success: true, user: response.user };
+      } else {
+        return { success: false, error: response.message || 'Registration failed' };
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      return { success: false, error: error.message || 'Registration failed' };
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const otpLogin = async (phoneNumber) => {
     setLoading(true);
@@ -51,7 +108,8 @@ export const AuthProvider = ({ children }) => {
           id: Math.random().toString(36).substr(2, 9),
           phoneNumber,
           name: 'Demo User',
-          type: 'client', // client, cleaner, admin
+          role: 'user',
+          type: 'client',
           createdAt: new Date().toISOString()
         };
         
@@ -75,11 +133,14 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setCurrentUser(null);
     localStorage.removeItem('madeasy_user');
+    localStorage.removeItem('token');
   };
 
   const value = {
     user: currentUser,
     currentUser,
+    login,
+    register,
     otpLogin,
     verifyOtp,
     loading,

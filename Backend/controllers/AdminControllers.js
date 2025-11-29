@@ -70,6 +70,32 @@ exports.getDashboardStats = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    Get all users (admin view)
+// @route   GET /api/admin/users
+// @access  Private/Admin
+exports.getAllUsers = asyncHandler(async (req, res, next) => {
+  const { page = 1, limit = 20 } = req.query;
+
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  const users = await User.find({})
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit))
+    .select('name email phone role createdAt');
+
+  const total = await User.countDocuments();
+
+  res.status(200).json({
+    success: true,
+    count: users.length,
+    total,
+    page: parseInt(page),
+    pages: Math.ceil(total / parseInt(limit)),
+    data: users
+  });
+});
+
 // @desc    Get pending cleaner applications
 // @route   GET /api/admin/cleaners/pending
 // @access  Private/Admin
@@ -91,7 +117,13 @@ exports.getPendingCleaners = asyncHandler(async (req, res, next) => {
 exports.reviewCleaner = asyncHandler(async (req, res, next) => {
   const { status, rejectionReason } = req.body;
   
-  const user = await User.findById(req.params.id);
+  // Sanitize the ID - remove any leading colon if present
+  let userId = req.params.id;
+  if (userId && typeof userId === 'string' && userId.startsWith(':')) {
+    userId = userId.substring(1);
+  }
+  
+  const user = await User.findById(userId);
   
   if (!user) {
     return res.status(404).json({
@@ -128,7 +160,6 @@ exports.reviewCleaner = asyncHandler(async (req, res, next) => {
     data: user
   });
 });
-
 // @desc    Get all bookings
 // @route   GET /api/admin/bookings
 // @access  Private/Admin

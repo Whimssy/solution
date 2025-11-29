@@ -54,6 +54,8 @@ export const cleanerService = {
         jobsCompleted: cleaner.servicesCompleted || cleaner.jobsCompleted || 0,
         specialties: cleaner.specialties || [],
         availability: cleaner.isAvailable ? 'Available' : 'Unavailable',
+        availabilitySchedule: cleaner.availability || {},
+        workingHours: cleaner.workingHours || { start: '08:00', end: '17:00' },
         hourlyRate: cleaner.hourlyRate || 0,
         languages: cleaner.languages || [],
         available: cleaner.isAvailable !== false,

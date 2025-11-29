@@ -51,15 +51,33 @@ const Navbar = () => {
     return location.pathname === path;
   };
 
+  const handleHowItWorksClick = (e) => {
+    e.preventDefault();
+    if (location.pathname === '/') {
+      // Already on home page, just scroll
+      const element = document.getElementById('how-it-works');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } else {
+      // Navigate to home page with hash
+      navigate('/#how-it-works');
+    }
+  };
+
   const navLinks = [
     { path: '/', label: 'Home' },
-    { path: '/search', label: 'Find Cleaners' },
-    { path: '/how-it-works', label: 'How It Works'},
+    { path: '#how-it-works', label: 'How It Works', onClick: handleHowItWorksClick },
    
   ];
 
  const userMenuItems = user ? 
   [
+    { 
+      path: user.role === 'cleaner' ? '/cleaner/dashboard' : '/client/dashboard', 
+      label: 'Dashboard', 
+      icon: '📊' 
+    },
     { path: '/bookings', label: 'My Bookings', icon: '📋' },
     { path: '/profile', label: 'Profile', icon: '👤' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
@@ -82,14 +100,26 @@ const Navbar = () => {
         {/* Desktop Navigation */}
         <div className="nav-menu">
           {navLinks.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className={`nav-link ${isActiveRoute(link.path) ? 'active' : ''}`}
-            >
-              <span className="nav-icon">{link.icon}</span>
-              {link.label}
-            </Link>
+            link.onClick ? (
+              <a
+                key={link.path}
+                href={link.path}
+                onClick={link.onClick}
+                className={`nav-link ${isActiveRoute(link.path.split('#')[0]) ? 'active' : ''}`}
+              >
+                <span className="nav-icon">{link.icon}</span>
+                {link.label}
+              </a>
+            ) : (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`nav-link ${isActiveRoute(link.path) ? 'active' : ''}`}
+              >
+                <span className="nav-icon">{link.icon}</span>
+                {link.label}
+              </Link>
+            )
           ))}
         </div>
 
@@ -175,7 +205,7 @@ const Navbar = () => {
           )}
 
           {/* Book Now Button */}
-          <Link to="/search" className="btn btn-book-now">
+          <Link to="/" className="btn btn-book-now">
             <span className="btn-icon">✨</span>
             Book Now
           </Link>
@@ -216,15 +246,30 @@ const Navbar = () => {
 
             <div className="mobile-nav-links">
               {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`mobile-nav-link ${isActiveRoute(link.path) ? 'active' : ''}`}
-                  onClick={toggleMobileMenu}
-                >
-                  <span className="nav-icon">{link.icon}</span>
-                  {link.label}
-                </Link>
+                link.onClick ? (
+                  <a
+                    key={link.path}
+                    href={link.path}
+                    onClick={(e) => {
+                      link.onClick(e);
+                      toggleMobileMenu();
+                    }}
+                    className={`mobile-nav-link ${isActiveRoute(link.path.split('#')[0]) ? 'active' : ''}`}
+                  >
+                    <span className="nav-icon">{link.icon}</span>
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={`mobile-nav-link ${isActiveRoute(link.path) ? 'active' : ''}`}
+                    onClick={toggleMobileMenu}
+                  >
+                    <span className="nav-icon">{link.icon}</span>
+                    {link.label}
+                  </Link>
+                )
               ))}
             </div>
 
@@ -299,7 +344,7 @@ const Navbar = () => {
               </div>
 
               <Link
-                to="/search"
+                to="/"
                 className="btn btn-book-now full-width"
                 onClick={toggleMobileMenu}
               >

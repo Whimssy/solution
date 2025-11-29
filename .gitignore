@@ -37,3 +37,8 @@ lerna-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+Backend/logs/error.log
+Backend/logs/combined.log
+Backend/logs/debug.log
+Backend/logs/exceptions.log
+Backend/logs/rejections.log

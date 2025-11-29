@@ -37,6 +37,28 @@ export const adminService = {
   },
 
   /**
+   * Get all users (admin)
+   * @returns {Promise<object>} - Users list with pagination
+   */
+  async getAllUsers(params = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.page) queryParams.append('page', params.page);
+      if (params.limit) queryParams.append('limit', params.limit);
+
+      const queryString = queryParams.toString();
+
+      const response = await apiRequest(`/admin/users${queryString ? `?${queryString}` : ''}`, {
+        method: 'GET',
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Get all users error:', error);
+      throw new Error(error.message || 'Failed to fetch users');
+    }
+  },
+
+  /**
    * Get pending cleaner applications
    * @returns {Promise<object>} - Pending cleaner applications
    */

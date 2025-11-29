@@ -117,7 +117,7 @@
 }
 
 .cleaner-services {
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
 
 .services-label {
@@ -147,6 +147,45 @@
   background: #f8f9fa;
   color: #666;
   border-color: #e9ecef;
+}
+
+.cleaner-availability {
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.availability-label {
+  color: #666;
+  font-size: 0.85em;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.availability-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.availability-days,
+.availability-hours {
+  color: #2c5530;
+  font-size: 0.85em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.availability-days {
+  font-weight: 500;
+}
+
+.availability-hours {
+  color: #666;
+  font-size: 0.8em;
 }
 
 .cleaner-footer {
@@ -217,6 +256,15 @@
 @media (max-width: 768px) {
   .cleaner-card {
     padding: 15px;
+  }
+  
+  .cleaner-availability {
+    padding: 10px;
+    margin-bottom: 15px;
+  }
+  
+  .availability-info {
+    gap: 4px;
   }
   
   .cleaner-footer {

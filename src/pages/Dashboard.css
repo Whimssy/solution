@@ -63,6 +63,44 @@
   font-weight: 700;
 }
 
+.welcome-title {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 2.5rem;
+  color: #2c3e50;
+  margin-bottom: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.greeting-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 2.8rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+}
+
+.user-name {
+  font-size: 1.8rem;
+  color: #4a5568;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.welcome-tagline {
+  font-size: 1.25rem;
+  color: #718096;
+  margin: 0;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
 .welcome-section p {
   font-size: 1.2rem;
   color: #7f8c8d;
@@ -378,6 +416,51 @@
 .btn-warning:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+}
+
+/* Auth Notice */
+.auth-notice {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 2px solid #2196f3;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.notice-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.notice-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.notice-content > div {
+  flex: 1;
+  min-width: 250px;
+}
+
+.notice-content strong {
+  display: block;
+  color: #1976d2;
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+
+.notice-content p {
+  color: #424242;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.notice-content .btn {
+  flex-shrink: 0;
+  width: auto;
+  padding: 10px 24px;
 }
 
 /* Empty State */

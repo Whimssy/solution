@@ -6,6 +6,7 @@ const {
   getPendingCleaners,
   reviewCleaner,
   getAllBookings,
+  getAllUsers,
   getLogs,
   getLogStats,
   getLogById,
@@ -22,6 +23,11 @@ router.post('/login', adminLogin);
 // @route   GET /api/admin/dashboard
 // @access  Private/Admin
 router.get('/dashboard', protect, authorize('admin', 'super_admin'), getDashboardStats);
+
+// @desc    Get all users
+// @route   GET /api/admin/users
+// @access  Private/Admin
+router.get('/users', protect, authorize('admin', 'super_admin'), getAllUsers);
 
 // @desc    Get pending cleaner applications
 // @route   GET /api/admin/cleaners/pending
